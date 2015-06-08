@@ -79,7 +79,7 @@ func testWatch(t *testing.T, kv Store) {
 	}()
 
 	// Check for updates
-	timeout := time.After(2 * time.Second)
+	timeout := time.After(4 * time.Second)
 	eventCount := 1
 	for {
 		select {
@@ -298,7 +298,7 @@ func testPutEphemeral(t *testing.T, kv Store) {
 	}
 
 	// Let the session expire
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	// Zookeeper: re-create the client
 	if zookeeper {
