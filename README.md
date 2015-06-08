@@ -1,5 +1,9 @@
 # libkv
 
+[![GoDoc](https://godoc.org/github.com/docker/libkv?status.png)](https://godoc.org/github.com/docker/libkv)
+[![Build Status](https://travis-ci.org/docker/libkv.svg?branch=master)](https://travis-ci.org/docker/libkv)
+[![Coverage Status](https://coveralls.io/repos/docker/libkv/badge.svg)](https://coveralls.io/r/docker/libkv)
+
 `libkv` provides a `Go` native library to store metadata.
 
 The goal of `libkv` is to abstract common store operations for multiple Key/Value backends and offer the same experience no matter which one of the backend you want to use.
@@ -22,17 +26,17 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/swarm/store"
+	"github.com/docker/libkv"
 )
 
 func main() {
 	client := "localhost:8500"
 
 	// Initialize a new store with consul
-	kv, err = store.NewStore(
-		store.CONSUL, // or "consul"
+	kv, err = libkv.NewStore(
+		libkv.CONSUL, // or "consul"
 		[]string{client},
-		&store.Config{
+		&libkv.Config{
 			ConnectionTimeout: 10*time.Second,
 		},
 	)
