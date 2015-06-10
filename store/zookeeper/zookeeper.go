@@ -1,16 +1,18 @@
-package store
+package zookeeper
 
 import (
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/libkv/store"
 	zk "github.com/samuel/go-zookeeper/zk"
 )
 
 const defaultTimeout = 10 * time.Second
 
-// Zookeeper embeds the zookeeper client
+// Zookeeper is the receiver type for
+// the Store interface
 type Zookeeper struct {
 	timeout time.Duration
 	client  *zk.Conn
@@ -24,8 +26,8 @@ type zookeeperLock struct {
 }
 
 // InitializeZookeeper creates a new Zookeeper client
-// given a list of endpoints and optional tls config
-func InitializeZookeeper(endpoints []string, options *Config) (Store, error) {
+// given a list of endpoints and an optional tls config
+func InitializeZookeeper(endpoints []string, options *store.Config) (store.Store, error) {
 	s := &Zookeeper{}
 	s.timeout = defaultTimeout
 
@@ -36,35 +38,47 @@ func InitializeZookeeper(endpoints []string, options *Config) (Store, error) {
 		}
 	}
 
+	// Connect to Zookeeper
 	conn, _, err := zk.Connect(endpoints, s.timeout)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
 	s.client = conn
+
 	return s, nil
 }
 
-// SetTimeout sets the timout for connecting to Zookeeper
+// setTimeout sets the timeout for connecting to Zookeeper
 func (s *Zookeeper) setTimeout(time time.Duration) {
 	s.timeout = time
 }
 
 // Get the value at "key", returns the last modified index
-// to use in conjunction to CAS calls
-func (s *Zookeeper) Get(key string) (*KVPair, error) {
-	resp, meta, err := s.client.Get(normalize(key))
+// to use in conjunction to Atomic calls
+func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
+	resp, meta, err := s.client.Get(store.Normalize(key))
 	if err != nil {
 		return nil, err
 	}
+
+	// If resp is nil, the key does not exist
 	if resp == nil {
-		return nil, ErrKeyNotFound
+		return nil, store.ErrKeyNotFound
 	}
-	return &KVPair{key, resp, uint64(meta.Version)}, nil
+
+	pair = &store.KVPair{
+		Key:       key,
+		Value:     resp,
+		LastIndex: uint64(meta.Version),
+	}
+
+	return pair, nil
 }
 
-// Create the entire path for a directory that does not exist
-func (s *Zookeeper) createFullpath(path []string, ephemeral bool) error {
+// createFullPath creates the entire path for a directory
+// that does not exist
+func (s *Zookeeper) createFullPath(path []string, ephemeral bool) error {
 	for i := 1; i <= len(path); i++ {
 		newpath := "/" + strings.Join(path[:i], "/")
 		if i == len(path) && ephemeral {
@@ -83,58 +97,63 @@ func (s *Zookeeper) createFullpath(path []string, ephemeral bool) error {
 }
 
 // Put a value at "key"
-func (s *Zookeeper) Put(key string, value []byte, opts *WriteOptions) error {
-	fkey := normalize(key)
+func (s *Zookeeper) Put(key string, value []byte, opts *store.WriteOptions) error {
+	fkey := store.Normalize(key)
+
 	exists, err := s.Exists(key)
 	if err != nil {
 		return err
 	}
+
 	if !exists {
 		if opts != nil && opts.Ephemeral {
-			s.createFullpath(splitKey(key), opts.Ephemeral)
+			s.createFullPath(store.SplitKey(key), opts.Ephemeral)
 		} else {
-			s.createFullpath(splitKey(key), false)
+			s.createFullPath(store.SplitKey(key), false)
 		}
 	}
+
 	_, err = s.client.Set(fkey, value, -1)
 	return err
 }
 
 // Delete a value at "key"
 func (s *Zookeeper) Delete(key string) error {
-	err := s.client.Delete(normalize(key), -1)
+	err := s.client.Delete(store.Normalize(key), -1)
 	return err
 }
 
 // Exists checks if the key exists inside the store
 func (s *Zookeeper) Exists(key string) (bool, error) {
-	exists, _, err := s.client.Exists(normalize(key))
+	exists, _, err := s.client.Exists(store.Normalize(key))
 	if err != nil {
 		return false, err
 	}
 	return exists, nil
 }
 
-// Watch changes on a key.
-// Returns a channel that will receive changes or an error.
-// Upon creating a watch, the current value will be sent to the channel.
-// Providing a non-nil stopCh can be used to stop watching.
-func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, error) {
-	fkey := normalize(key)
+// Watch for changes on a "key"
+// It returns a channel that will receive changes or pass
+// on errors. Upon creation, the current value will first
+// be sent to the channel. Providing a non-nil stopCh can
+// be used to stop watching.
+func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+	// Get the key first
 	pair, err := s.Get(key)
 	if err != nil {
 		return nil, err
 	}
 
 	// Catch zk notifications and fire changes into the channel.
-	watchCh := make(chan *KVPair)
+	watchCh := make(chan *store.KVPair)
 	go func() {
 		defer close(watchCh)
 
-		// Get returns the current value before setting the watch.
+		// Get returns the current value to the channel prior
+		// to listening to any event that may occur on that key
 		watchCh <- pair
 		for {
-			_, _, eventCh, err := s.client.GetW(fkey)
+			_, _, eventCh, err := s.client.GetW(store.Normalize(key))
 			if err != nil {
 				return
 			}
@@ -155,34 +174,37 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, e
 	return watchCh, nil
 }
 
-// WatchTree watches changes on a "directory"
-// Returns a channel that will receive changes or an error.
-// Upon creating a watch, the current value will be sent to the channel.
-// Providing a non-nil stopCh can be used to stop watching.
-func (s *Zookeeper) WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*KVPair, error) {
-	fprefix := normalize(prefix)
-	entries, err := s.List(prefix)
+// WatchTree watches for changes on a "directory"
+// It returns a channel that will receive changes or pass
+// on errors. Upon creating a watch, the current childs values
+// will be sent to the channel .Providing a non-nil stopCh can
+// be used to stop watching.
+func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+	// List the childrens first
+	entries, err := s.List(directory)
 	if err != nil {
 		return nil, err
 	}
 
 	// Catch zk notifications and fire changes into the channel.
-	watchCh := make(chan []*KVPair)
+	watchCh := make(chan []*store.KVPair)
 	go func() {
 		defer close(watchCh)
 
-		// List returns the current values before setting the watch.
+		// List returns the children values to the channel
+		// prior to listening to any events that may occur
+		// on those keys
 		watchCh <- entries
 
 		for {
-			_, _, eventCh, err := s.client.ChildrenW(fprefix)
+			_, _, eventCh, err := s.client.ChildrenW(store.Normalize(directory))
 			if err != nil {
 				return
 			}
 			select {
 			case e := <-eventCh:
 				if e.Type == zk.EventNodeChildrenChanged {
-					if kv, err := s.List(prefix); err == nil {
+					if kv, err := s.List(directory); err == nil {
 						watchCh <- kv
 					}
 				}
@@ -196,78 +218,98 @@ func (s *Zookeeper) WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*
 	return watchCh, nil
 }
 
-// List the content of a given prefix
-func (s *Zookeeper) List(prefix string) ([]*KVPair, error) {
-	keys, stat, err := s.client.Children(normalize(prefix))
+// List child nodes of a given directory
+func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
+	keys, stat, err := s.client.Children(store.Normalize(directory))
 	if err != nil {
 		return nil, err
 	}
-	kv := []*KVPair{}
+
+	kv := []*store.KVPair{}
+
+	// FIXME Costly Get request for each child key..
 	for _, key := range keys {
-		// FIXME Costly Get request for each child key..
-		pair, err := s.Get(prefix + normalize(key))
+		pair, err := s.Get(directory + store.Normalize(key))
 		if err != nil {
 			return nil, err
 		}
-		kv = append(kv, &KVPair{key, []byte(pair.Value), uint64(stat.Version)})
+
+		kv = append(kv, &store.KVPair{
+			Key:       key,
+			Value:     []byte(pair.Value),
+			LastIndex: uint64(stat.Version),
+		})
 	}
+
 	return kv, nil
 }
 
-// DeleteTree deletes a range of keys based on prefix
-func (s *Zookeeper) DeleteTree(prefix string) error {
-	pairs, err := s.List(prefix)
+// DeleteTree deletes a range of keys under a given directory
+func (s *Zookeeper) DeleteTree(directory string) error {
+	pairs, err := s.List(directory)
 	if err != nil {
 		return err
 	}
+
 	var reqs []interface{}
+
 	for _, pair := range pairs {
 		reqs = append(reqs, &zk.DeleteRequest{
-			Path:    normalize(prefix + "/" + pair.Key),
+			Path:    store.Normalize(directory + "/" + pair.Key),
 			Version: -1,
 		})
 	}
+
 	_, err = s.client.Multi(reqs...)
 	return err
 }
 
 // AtomicPut put a value at "key" if the key has not been
 // modified in the meantime, throws an error if this is the case
-func (s *Zookeeper) AtomicPut(key string, value []byte, previous *KVPair, _ *WriteOptions) (bool, *KVPair, error) {
+func (s *Zookeeper) AtomicPut(key string, value []byte, previous *store.KVPair, _ *store.WriteOptions) (bool, *store.KVPair, error) {
 	if previous == nil {
-		return false, nil, ErrPreviousNotSpecified
+		return false, nil, store.ErrPreviousNotSpecified
 	}
 
-	meta, err := s.client.Set(normalize(key), value, int32(previous.LastIndex))
+	meta, err := s.client.Set(store.Normalize(key), value, int32(previous.LastIndex))
 	if err != nil {
+		// Compare Failed
 		if err == zk.ErrBadVersion {
-			return false, nil, ErrKeyModified
+			return false, nil, store.ErrKeyModified
 		}
 		return false, nil, err
 	}
-	return true, &KVPair{Key: key, Value: value, LastIndex: uint64(meta.Version)}, nil
-}
 
-// AtomicDelete deletes a value at "key" if the key has not
-// been modified in the meantime, throws an error if this is the case
-func (s *Zookeeper) AtomicDelete(key string, previous *KVPair) (bool, error) {
-	if previous == nil {
-		return false, ErrPreviousNotSpecified
+	pair := &store.KVPair{
+		Key:       key,
+		Value:     value,
+		LastIndex: uint64(meta.Version),
 	}
 
-	err := s.client.Delete(normalize(key), int32(previous.LastIndex))
+	return true, pair, nil
+}
+
+// AtomicDelete deletes a value at "key" if the key
+// has not been modified in the meantime, throws an
+// error if this is the case
+func (s *Zookeeper) AtomicDelete(key string, previous *store.KVPair) (bool, error) {
+	if previous == nil {
+		return false, store.ErrPreviousNotSpecified
+	}
+
+	err := s.client.Delete(store.Normalize(key), int32(previous.LastIndex))
 	if err != nil {
 		if err == zk.ErrBadVersion {
-			return false, ErrKeyModified
+			return false, store.ErrKeyModified
 		}
 		return false, err
 	}
 	return true, nil
 }
 
-// NewLock returns a handle to a lock struct which can be used to acquire and
-// release the mutex.
-func (s *Zookeeper) NewLock(key string, options *LockOptions) (Locker, error) {
+// NewLock returns a handle to a lock struct which can
+// be used to provide mutual exclusion on a key
+func (s *Zookeeper) NewLock(key string, options *store.LockOptions) (lock store.Locker, err error) {
 	value := []byte("")
 
 	// Apply options
@@ -277,30 +319,34 @@ func (s *Zookeeper) NewLock(key string, options *LockOptions) (Locker, error) {
 		}
 	}
 
-	return &zookeeperLock{
+	lock = &zookeeperLock{
 		client: s.client,
-		key:    normalize(key),
+		key:    store.Normalize(key),
 		value:  value,
-		lock:   zk.NewLock(s.client, normalize(key), zk.WorldACL(zk.PermAll)),
-	}, nil
+		lock:   zk.NewLock(s.client, store.Normalize(key), zk.WorldACL(zk.PermAll)),
+	}
+
+	return lock, err
 }
 
-// Lock attempts to acquire the lock and blocks while doing so.
-// Returns a channel that is closed if our lock is lost or an error.
+// Lock attempts to acquire the lock and blocks while
+// doing so. It returns a channel that is closed if our
+// lock is lost or if an error occurs
 func (l *zookeeperLock) Lock() (<-chan struct{}, error) {
 	err := l.lock.Lock()
 
 	if err == nil {
 		// We hold the lock, we can set our value
-		// FIXME: When the last leader leaves the election, this value will be left behind
+		// FIXME: The value is left behind
+		// (problematic for leader election)
 		_, err = l.client.Set(l.key, l.value, -1)
 	}
 
 	return make(chan struct{}), err
 }
 
-// Unlock released the lock. It is an error to call this
-// if the lock is not currently held.
+// Unlock the "key". Calling unlock while
+// not holding the lock will throw an error
 func (l *zookeeperLock) Unlock() error {
 	return l.lock.Unlock()
 }
