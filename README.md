@@ -10,7 +10,7 @@ The goal of `libkv` is to abstract common store operations for multiple Key/Valu
 
 For example, you can use it to store your metadata or for service discovery to register machines and endpoints inside your cluster.
 
-You can also easily implement a generic Leader Election on top of it (see the `swarm/leadership` package).
+You can also easily implement a generic *Leader Election* on top of it (see the [swarm/leadership](https://github.com/docker/swarm/tree/master/leadership) package).
 
 As of now, `libkv` offers support for `Consul`, `Etcd` and `Zookeeper`.
 
@@ -24,9 +24,10 @@ package main
 import (
 	"fmt"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
+	
 	"github.com/docker/libkv"
+	"github.com/docker/libkv/store"
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
@@ -34,14 +35,14 @@ func main() {
 
 	// Initialize a new store with consul
 	kv, err = libkv.NewStore(
-		libkv.CONSUL, // or "consul"
+		store.CONSUL, // or "consul"
 		[]string{client},
-		&libkv.Config{
+		&store.Config{
 			ConnectionTimeout: 10*time.Second,
 		},
 	)
 	if err != nil {
-		log.Error("Cannot create store consul")
+		log.Fatal("Cannot create store consul")
 	}
 
 	key := "foo"
@@ -59,11 +60,13 @@ func main() {
 }
 ```
 
+You can find other usage examples for `libkv` under the `docker/swarm` or `docker/libnetwork` repositories.
+
 ## Details
 
 You should expect the same experience for basic operations like `Get`/`Put`, etc.
 
-However calls like `WatchTree` are limited to the common denominator and you should only expect events when nodes are added or deleted (although `Etcd` and `Consul` will likely return more events that you should triage).
+However calls like `WatchTree` may return different events (or number of events) depending on the backend (for now, `Etcd` and `Consul` will likely return more events than `Zookeeper` that you should triage properly).
 
 ## Create a new storage backend
 
@@ -76,29 +79,23 @@ type Store interface {
 	Delete(key string) error
 	Exists(key string) (bool, error)
 	Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, error)
-	WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*KVPair, error)
+	WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*KVPair, error)
 	NewLock(key string, options *LockOptions) (Locker, error)
-	List(prefix string) ([]*KVPair, error)
-	DeleteTree(prefix string) error
+	List(directory string) ([]*KVPair, error)
+	DeleteTree(directory string) error
 	AtomicPut(key string, value []byte, previous *KVPair, options *WriteOptions) (bool, *KVPair, error)
 	AtomicDelete(key string, previous *KVPair) (bool, error)
 	Close()
 }
 ```
 
-In the case of Swarm and to be eligible as a **discovery backend** only, a K/V store implementation should at least offer `Get`, `Put`, `WatchTree` and `List`.
-
-`Put` should support usage of `ttl` to be able to remove entries in case of a node failure.
-
 You can get inspiration from existing backends to create a new one. This interface could be subject to changes to improve the experience of using the library and contributing to a new backend.
 
-##Future
+##Roadmap
 
-A few points on the ROADMAP:
-
-- Make the API nicer to use
-- Improve performance (remove extras `Get` operations)
-- Provide with more options (`consistency` for example)
+- Make the API nicer to use (using `options`)
+- Provide more options (`consistency` for example)
+- Improve performance (remove extras `Get`/`List` operations)
 - Add more exhaustive tests
 - New backends?
 
