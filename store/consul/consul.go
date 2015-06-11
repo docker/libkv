@@ -111,19 +111,19 @@ func (s *Consul) refreshSession(pair *api.KVPair) error {
 		if err != nil {
 			return err
 		}
-	}
 
-	lockOpts := &api.LockOptions{
-		Key:     pair.Key,
-		Session: session,
-	}
+		lockOpts := &api.LockOptions{
+			Key:     pair.Key,
+			Session: session,
+		}
 
-	// Lock and ignore if lock is held
-	// It's just a placeholder for the
-	// ephemeral behavior
-	lock, _ := s.client.LockOpts(lockOpts)
-	if lock != nil {
-		lock.Lock(nil)
+		// Lock and ignore if lock is held
+		// It's just a placeholder for the
+		// ephemeral behavior
+		lock, _ := s.client.LockOpts(lockOpts)
+		if lock != nil {
+			lock.Lock(nil)
+		}
 	}
 
 	_, _, err = s.client.Session().Renew(session, nil)
