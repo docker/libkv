@@ -325,18 +325,18 @@ func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*
 			opts.WaitIndex = meta.LastIndex
 
 			// Return children KV pairs to the channel
-			kv := []*store.KVPair{}
+			kvpairs := []*store.KVPair{}
 			for _, pair := range pairs {
 				if pair.Key == directory {
 					continue
 				}
-				kv = append(kv, &store.KVPair{
+				kvpairs = append(kvpairs, &store.KVPair{
 					Key:       pair.Key,
 					Value:     pair.Value,
 					LastIndex: pair.ModifyIndex,
 				})
 			}
-			watchCh <- kv
+			watchCh <- kvpairs
 		}
 	}()
 
