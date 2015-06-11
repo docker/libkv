@@ -101,8 +101,9 @@ func (s *Consul) refreshSession(pair *api.KVPair) error {
 
 	if session == "" {
 		entry := &api.SessionEntry{
-			Behavior: api.SessionBehaviorDelete,
-			TTL:      s.ephemeralTTL.String(),
+			Behavior:  api.SessionBehaviorDelete,       // Delete the key when the session expires
+			TTL:       ((s.ephemeralTTL) / 2).String(), // Consul multiplies the TTL by 2x
+			LockDelay: 1 * time.Millisecond,            // Virtually disable lock delay
 		}
 
 		// Create the key session
