@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/docker/libkv/store"
+	"github.com/docker/libkv/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func TestConsulStore(t *testing.T) {
 	kv := makeConsulClient(t)
 	backup := makeConsulClient(t)
 
-	store.TestStore(t, kv, backup)
+	testutils.RunTestStore(t, kv, backup)
 }
 
 func TestGetActiveSession(t *testing.T) {
