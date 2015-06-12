@@ -11,7 +11,7 @@ import (
 func makeEtcdClient(t *testing.T) store.Store {
 	client := "localhost:4001"
 
-	kv, err := InitializeEtcd(
+	kv, err := New(
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,

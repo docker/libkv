@@ -31,9 +31,9 @@ type consulLock struct {
 	lock *api.Lock
 }
 
-// InitializeConsul creates a new Consul client given
-// a list of endpoints and optional tls config
-func InitializeConsul(endpoints []string, options *store.Config) (store.Store, error) {
+// New creates a new Consul client given a list
+// of endpoints and optional tls config
+func New(endpoints []string, options *store.Config) (store.Store, error) {
 	s := &Consul{}
 
 	// Create Consul client

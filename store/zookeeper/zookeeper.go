@@ -24,9 +24,9 @@ type zookeeperLock struct {
 	value  []byte
 }
 
-// InitializeZookeeper creates a new Zookeeper client
-// given a list of endpoints and an optional tls config
-func InitializeZookeeper(endpoints []string, options *store.Config) (store.Store, error) {
+// New creates a new Zookeeper client given a
+// list of endpoints and an optional tls config
+func New(endpoints []string, options *store.Config) (store.Store, error) {
 	s := &Zookeeper{}
 	s.timeout = defaultTimeout
 

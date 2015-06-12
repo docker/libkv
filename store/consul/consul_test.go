@@ -12,7 +12,7 @@ import (
 func makeConsulClient(t *testing.T) store.Store {
 	client := "localhost:8500"
 
-	kv, err := InitializeConsul(
+	kv, err := New(
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,
