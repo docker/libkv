@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libkv/store"
 	api "github.com/hashicorp/consul/api"
 )
@@ -60,7 +59,6 @@ func InitializeConsul(endpoints []string, options *store.Config) (store.Store, e
 	// Creates a new client
 	client, err := api.NewClient(config)
 	if err != nil {
-		log.Errorf("Couldn't initialize consul client..")
 		return nil, err
 	}
 	s.client = client
@@ -312,7 +310,6 @@ func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*
 			// Get all the childrens
 			pairs, meta, err := kv.List(directory, opts)
 			if err != nil {
-				log.Errorf("consul: %v", err)
 				return
 			}
 

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libkv/store"
 	zk "github.com/samuel/go-zookeeper/zk"
 )
@@ -41,7 +40,6 @@ func InitializeZookeeper(endpoints []string, options *store.Config) (store.Store
 	// Connect to Zookeeper
 	conn, _, err := zk.Connect(endpoints, s.timeout)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	s.client = conn
