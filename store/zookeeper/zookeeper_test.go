@@ -11,7 +11,7 @@ import (
 func makeZkClient(t *testing.T) store.Store {
 	client := "localhost:2181"
 
-	kv, err := InitializeZookeeper(
+	kv, err := New(
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,

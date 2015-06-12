@@ -33,9 +33,9 @@ const (
 	defaultUpdateTime = 5 * time.Second
 )
 
-// InitializeEtcd creates a new Etcd client given
-// a list of endpoints and an optional tls config
-func InitializeEtcd(addrs []string, options *store.Config) (store.Store, error) {
+// New creates a new Etcd client given a list
+// of endpoints and an optional tls config
+func New(addrs []string, options *store.Config) (store.Store, error) {
 	s := &Etcd{}
 
 	entries := store.CreateEndpoints(addrs, "http")
