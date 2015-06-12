@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/docker/libkv/store"
+	"github.com/docker/libkv/testutils"
 )
 
 func makeEtcdClient(t *testing.T) store.Store {
@@ -29,5 +30,5 @@ func TestEtcdStore(t *testing.T) {
 	kv := makeEtcdClient(t)
 	backup := makeEtcdClient(t)
 
-	store.TestStore(t, kv, backup)
+	testutils.RunTestStore(t, kv, backup)
 }
