@@ -292,7 +292,7 @@ func testPutEphemeral(t *testing.T, kv store.Store, otherConn store.Store) {
 	otherConn.Close()
 
 	// Let the session expire
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// Get on firstKey shouldn't work
 	pair, err = kv.Get(firstKey)
