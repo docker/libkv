@@ -282,7 +282,14 @@ func (s *Etcd) AtomicPut(key string, value []byte, previous *store.KVPair, optio
 		return false, nil, store.ErrPreviousNotSpecified
 	}
 
-	meta, err := s.client.CompareAndSwap(store.Normalize(key), string(value), 0, "", previous.LastIndex)
+	var meta *etcd.Response
+	var err error
+	if previous.LastIndex != 0 {
+		meta, err = s.client.CompareAndSwap(store.Normalize(key), string(value), 0, "", previous.LastIndex)
+	} else {
+		// Interpret LastIndex == 0 as atomic create.
+		meta, err = s.client.Create(store.Normalize(key), string(value), 0)
+	}
 	if err != nil {
 		if etcdError, ok := err.(*etcd.EtcdError); ok {
 			// Compare Failed
