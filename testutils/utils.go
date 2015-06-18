@@ -178,7 +178,7 @@ func testAtomicPut(t *testing.T, kv store.Store) {
 	assert.Equal(t, pair.Value, value)
 	assert.NotEqual(t, pair.LastIndex, 0)
 
-	// This CAS should fail: no previous
+	// This CAS should fail: previous exists.
 	success, _, err := kv.AtomicPut("hello", []byte("WORLD"), nil, nil)
 	assert.Error(t, err)
 	assert.False(t, success)
@@ -196,13 +196,15 @@ func testAtomicPut(t *testing.T, kv store.Store) {
 }
 
 func testAtomicPutCreate(t *testing.T, kv store.Store) {
-	key := "foo/bar"
-	value := []byte("world")
+	// Use a key in a new directory to ensure Stores will create directories
+	// that don't yet exist.
+	key := "put/create"
+	value := []byte("putcreate")
 
-	// AtomicPut the key, uninitialized LastIndex means create the key.
-	prev := &store.KVPair{Key: key}
-	success, _, err := kv.AtomicPut(key, value, prev, nil)
+	// AtomicPut the key, previous = nil indicates create.
+	success, _, err := kv.AtomicPut(key, value, nil, nil)
 	assert.NoError(t, err)
+	assert.True(t, success)
 
 	// Get should return the value and an incremented index
 	pair, err := kv.Get(key)
@@ -211,17 +213,20 @@ func testAtomicPutCreate(t *testing.T, kv store.Store) {
 		assert.NotNil(t, pair.Value)
 	}
 	assert.Equal(t, pair.Value, value)
-	assert.NotEqual(t, pair.LastIndex, 0)
 
 	// Attempting to create again should fail.
-	success, _, err = kv.AtomicPut(key, value, prev, nil)
+	success, _, err = kv.AtomicPut(key, value, nil, nil)
 	assert.Error(t, err)
 	assert.False(t, success)
 
-	// This CAS should succeed
-	success, _, err = kv.AtomicPut(key, []byte("WORLD"), pair, nil)
+	// This CAS should succeed, since it has the value from Get()
+	success, _, err = kv.AtomicPut(key, []byte("PUTCREATE"), pair, nil)
 	assert.NoError(t, err)
 	assert.True(t, success)
+
+	// Delete the key, ensures runs of the test don't interfere with each other.
+	err = kv.DeleteTree("put")
+	assert.NoError(t, err)
 }
 
 func testAtomicDelete(t *testing.T, kv store.Store) {
