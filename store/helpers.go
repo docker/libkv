@@ -1,13 +1,23 @@
 package store
 
 import (
+	"net/url"
 	"strings"
 )
 
 // CreateEndpoints creates a list of endpoints given the right scheme
 func CreateEndpoints(addrs []string, scheme string) (entries []string) {
 	for _, addr := range addrs {
-		entries = append(entries, scheme+"://"+addr)
+		// Note that in the event of a bad URL that's still parseable (such as
+		// localhost:1234) the scheme will equal the hostname. We check against the
+		// supplied scheme to ensure we at least tried to handle this
+		// appropriately.
+		u, err := url.Parse(addr)
+		if err != nil || (u != nil && u.Scheme != scheme) {
+			entries = append(entries, scheme+"://"+addr)
+		} else {
+			entries = append(entries, addr)
+		}
 	}
 	return entries
 }

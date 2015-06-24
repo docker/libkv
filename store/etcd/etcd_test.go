@@ -26,6 +26,40 @@ func makeEtcdClient(t *testing.T) store.Store {
 	return kv
 }
 
+func TestEtcdConnection(t *testing.T) {
+	kv, err := New(
+		[]string{"localhost:4001"},
+		&store.Config{
+			ConnectionTimeout: 3 * time.Second,
+			EphemeralTTL:      2 * time.Second,
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("Could not construct kv store: %v", err)
+	}
+
+	if err := kv.Put("/foo", []byte("bar"), nil); err != nil {
+		t.Fatalf("Could not put: %v", err)
+	}
+
+	kv, err = New(
+		[]string{"http://localhost:4001"},
+		&store.Config{
+			ConnectionTimeout: 3 * time.Second,
+			EphemeralTTL:      2 * time.Second,
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("Could not construct kv store: %v", err)
+	}
+
+	if err := kv.Put("/foo", []byte("bar"), nil); err != nil {
+		t.Fatalf("Could not put: %v", err)
+	}
+}
+
 func TestEtcdStore(t *testing.T) {
 	kv := makeEtcdClient(t)
 	backup := makeEtcdClient(t)
