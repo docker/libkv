@@ -218,6 +218,11 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 		for {
 			select {
 			case result := <-etcdWatchCh:
+				if result == nil || result.Node == nil {
+					// Something went wrong, exit
+					// No need to stop the chan as the watch already ended
+					return
+				}
 				watchCh <- &store.KVPair{
 					Key:       key,
 					Value:     []byte(result.Node.Value),
@@ -260,7 +265,12 @@ func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*st
 
 		for {
 			select {
-			case <-etcdWatchCh:
+			case event := <-etcdWatchCh:
+				if event == nil {
+					// Something went wrong, exit
+					// No need to stop the chan as the watch already ended
+					return
+				}
 				// FIXME: We should probably use the value pushed by the channel.
 				// However, Node.Nodes seems to be empty.
 				if list, err := s.List(directory); err == nil {
