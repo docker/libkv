@@ -144,7 +144,11 @@ func (s *Etcd) Put(key string, value []byte, opts *store.WriteOptions) error {
 	// Default TTL = 0 means no expiration
 	var ttl uint64
 	if opts != nil && opts.Ephemeral {
-		ttl = uint64(opts.Heartbeat.Seconds())
+		if opts.Heartbeat != 0 {
+			ttl = uint64(opts.Heartbeat.Seconds())
+		} else {
+			ttl = uint64(s.ephemeralTTL.Seconds())
+		}
 	}
 
 	if _, err := s.client.Set(key, string(value), ttl); err != nil {
