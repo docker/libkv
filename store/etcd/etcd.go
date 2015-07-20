@@ -194,12 +194,6 @@ func (s *Etcd) Exists(key string) (bool, error) {
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
 func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
-	// Get the current value
-	current, err := s.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
 	// Start an etcd watch.
 	// Note: etcd will send the current value through the channel.
 	etcdWatchCh := make(chan *etcd.Response)
@@ -211,6 +205,12 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 	watchCh := make(chan *store.KVPair)
 	go func() {
 		defer close(watchCh)
+
+		// Get the current value
+		current, err := s.Get(key)
+		if err != nil {
+			return
+		}
 
 		// Push the current value through the channel.
 		watchCh <- current
@@ -243,12 +243,6 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
 func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
-	// Get child values
-	current, err := s.List(directory)
-	if err != nil {
-		return nil, err
-	}
-
 	// Start the watch
 	etcdWatchCh := make(chan *etcd.Response)
 	etcdStopCh := make(chan bool)
@@ -259,6 +253,12 @@ func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*st
 	watchCh := make(chan []*store.KVPair)
 	go func() {
 		defer close(watchCh)
+
+		// Get child values
+		current, err := s.List(directory)
+		if err != nil {
+			return
+		}
 
 		// Push the current value through the channel.
 		watchCh <- current
