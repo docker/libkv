@@ -432,7 +432,7 @@ func (l *etcdLock) Lock() (<-chan struct{}, error) {
 			lastIndex = resp.Node.ModifiedIndex
 		}
 
-		_, err = l.client.CompareAndSwap(key, l.value, l.ttl, "", lastIndex)
+		l.last, err = l.client.CompareAndSwap(key, l.value, l.ttl, "", lastIndex)
 
 		if err == nil {
 			// Leader section
@@ -467,7 +467,7 @@ func (l *etcdLock) holdLock(key string, lockHeld chan struct{}, stopLocking chan
 	for {
 		select {
 		case <-update.C:
-			l.last, err = l.client.Update(key, l.value, l.ttl)
+			l.last, err = l.client.CompareAndSwap(key, l.value, l.ttl, "", l.last.Node.ModifiedIndex)
 			if err != nil {
 				return
 			}
