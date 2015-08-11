@@ -114,8 +114,8 @@ func (s *Zookeeper) Put(key string, value []byte, opts *store.WriteOptions) erro
 	}
 
 	if !exists {
-		if opts != nil && opts.Ephemeral {
-			s.createFullPath(store.SplitKey(key), opts.Ephemeral)
+		if opts != nil && opts.TTL > 0 {
+			s.createFullPath(store.SplitKey(key), true)
 		} else {
 			s.createFullPath(store.SplitKey(key), false)
 		}

@@ -16,7 +16,6 @@ func makeConsulClient(t *testing.T) store.Store {
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,
-			EphemeralTTL:      2 * time.Second,
 		},
 	)
 
@@ -43,7 +42,7 @@ func TestGetActiveSession(t *testing.T) {
 	value := []byte("bar")
 
 	// Put the first key with the Ephemeral flag
-	err := kv.Put(key, value, &store.WriteOptions{Ephemeral: true})
+	err := kv.Put(key, value, &store.WriteOptions{TTL: 2 * time.Second})
 	assert.NoError(t, err)
 
 	// Session should not be empty

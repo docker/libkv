@@ -14,8 +14,7 @@ import (
 // Etcd is the receiver type for the
 // Store interface
 type Etcd struct {
-	client       *etcd.Client
-	ephemeralTTL time.Duration
+	client *etcd.Client
 }
 
 type etcdLock struct {
@@ -48,9 +47,6 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 		}
 		if options.ConnectionTimeout != 0 {
 			s.setTimeout(options.ConnectionTimeout)
-		}
-		if options.EphemeralTTL != 0 {
-			s.setEphemeralTTL(options.EphemeralTTL)
 		}
 	}
 
@@ -91,12 +87,6 @@ func (s *Etcd) setTLS(tls *tls.Config) {
 // setTimeout sets the timeout used for connecting to the store
 func (s *Etcd) setTimeout(time time.Duration) {
 	s.client.SetDialTimeout(time)
-}
-
-// setEphemeralHeartbeat sets the heartbeat value to notify
-// that a node is alive
-func (s *Etcd) setEphemeralTTL(time time.Duration) {
-	s.ephemeralTTL = time
 }
 
 // createDirectory creates the entire path for a directory
@@ -140,8 +130,8 @@ func (s *Etcd) Put(key string, value []byte, opts *store.WriteOptions) error {
 
 	// Default TTL = 0 means no expiration
 	var ttl uint64
-	if opts != nil && opts.Ephemeral {
-		ttl = uint64(s.ephemeralTTL.Seconds())
+	if opts != nil && opts.TTL > 0 {
+		ttl = uint64(opts.TTL.Seconds())
 	}
 
 	if _, err := s.client.Set(key, string(value), ttl); err != nil {

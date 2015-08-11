@@ -15,7 +15,6 @@ func makeZkClient(t *testing.T) store.Store {
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,
-			EphemeralTTL:      2 * time.Second,
 		},
 	)
 
