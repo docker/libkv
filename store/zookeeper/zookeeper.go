@@ -61,13 +61,12 @@ func (s *Zookeeper) setTimeout(time time.Duration) {
 // to use in conjunction to Atomic calls
 func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
 	resp, meta, err := s.client.Get(store.Normalize(key))
-	if err != nil {
-		return nil, err
-	}
 
-	// If resp is nil, the key does not exist
-	if resp == nil {
-		return nil, store.ErrKeyNotFound
+	if err != nil {
+		if err == zk.ErrNoNode {
+			return nil, store.ErrKeyNotFound
+		}
+		return nil, err
 	}
 
 	// FIXME handle very rare cases where Get returns the
