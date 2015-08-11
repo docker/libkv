@@ -77,4 +77,5 @@ func TestNewStoreUnsupported(t *testing.T) {
 	)
 	assert.Error(t, err)
 	assert.Nil(t, kv)
+	assert.Equal(t, "Backend storage not supported yet, please choose one of consul, etcd, zk", err.Error())
 }
