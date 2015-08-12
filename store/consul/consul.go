@@ -206,7 +206,10 @@ func (s *Consul) Delete(key string) error {
 // Exists checks that the key exists inside the store
 func (s *Consul) Exists(key string) (bool, error) {
 	_, err := s.Get(key)
-	if err != nil && err == store.ErrKeyNotFound {
+	if err != nil {
+		if err == store.ErrKeyNotFound {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil
