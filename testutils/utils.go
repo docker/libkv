@@ -40,6 +40,10 @@ func testPutGetDelete(t *testing.T, kv store.Store) {
 	assert.Equal(t, pair.Value, value)
 	assert.NotEqual(t, pair.LastIndex, 0)
 
+	// Get a not exist key should return ErrKeyNotFound
+	pair, err = kv.Get("/testPutGetDelete_not_exist_key")
+	assert.Equal(t, store.ErrKeyNotFound, err)
+
 	// Delete the key
 	err = kv.Delete(key)
 	assert.NoError(t, err)
