@@ -11,7 +11,7 @@ import (
 // RunTestStore is an helper testing method that is
 // called by each K/V backend sub-package testing
 func RunTestStore(t *testing.T, kv store.Store, backup store.Store) {
-	testPutGetDelete(t, kv)
+	testPutGetDeleteExists(t, kv)
 	testWatch(t, kv)
 	testWatchTree(t, kv)
 	testAtomicPut(t, kv)
@@ -23,7 +23,7 @@ func RunTestStore(t *testing.T, kv store.Store, backup store.Store) {
 	testDeleteTree(t, kv)
 }
 
-func testPutGetDelete(t *testing.T, kv store.Store) {
+func testPutGetDeleteExists(t *testing.T, kv store.Store) {
 	key := "foo"
 	value := []byte("bar")
 
@@ -44,6 +44,11 @@ func testPutGetDelete(t *testing.T, kv store.Store) {
 	pair, err = kv.Get("/testPutGetDelete_not_exist_key")
 	assert.Equal(t, store.ErrKeyNotFound, err)
 
+	// Exists should return true
+	exists, err := kv.Exists(key)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
 	// Delete the key
 	err = kv.Delete(key)
 	assert.NoError(t, err)
@@ -52,6 +57,11 @@ func testPutGetDelete(t *testing.T, kv store.Store) {
 	pair, err = kv.Get(key)
 	assert.Error(t, err)
 	assert.Nil(t, pair)
+
+	// Exists should return false
+	exists, err = kv.Exists(key)
+	assert.NoError(t, err)
+	assert.False(t, exists)
 }
 
 func testWatch(t *testing.T, kv store.Store) {
@@ -385,7 +395,7 @@ func testList(t *testing.T, kv store.Store) {
 
 	// List should fail: the key does not exist
 	pairs, err = kv.List("idontexist")
-	assert.Error(t, err)
+	assert.Equal(t, store.ErrKeyNotFound, err)
 	assert.Nil(t, pairs)
 }
 

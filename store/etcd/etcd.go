@@ -120,11 +120,8 @@ func (s *Etcd) createDirectory(path string) error {
 func (s *Etcd) Get(key string) (pair *store.KVPair, err error) {
 	result, err := s.client.Get(store.Normalize(key), false, false)
 	if err != nil {
-		if etcdError, ok := err.(*etcd.EtcdError); ok {
-			// Not a Directory or Not a file
-			if etcdError.ErrorCode == 100 || etcdError.ErrorCode == 102 || etcdError.ErrorCode == 104 {
-				return nil, store.ErrKeyNotFound
-			}
+		if isKeyNotFoundError(err) {
+			return nil, store.ErrKeyNotFound
 		}
 		return nil, err
 	}
@@ -178,9 +175,9 @@ func (s *Etcd) Delete(key string) error {
 
 // Exists checks if the key exists inside the store
 func (s *Etcd) Exists(key string) (bool, error) {
-	entry, err := s.Get(key)
-	if err != nil && entry != nil {
-		if err == store.ErrKeyNotFound || entry.Value == nil {
+	_, err := s.Get(key)
+	if err != nil {
+		if err == store.ErrKeyNotFound {
 			return false, nil
 		}
 		return false, err
@@ -359,6 +356,9 @@ func (s *Etcd) AtomicDelete(key string, previous *store.KVPair) (bool, error) {
 func (s *Etcd) List(directory string) ([]*store.KVPair, error) {
 	resp, err := s.client.Get(store.Normalize(directory), true, true)
 	if err != nil {
+		if isKeyNotFoundError(err) {
+			return nil, store.ErrKeyNotFound
+		}
 		return nil, err
 	}
 	kv := []*store.KVPair{}
@@ -506,4 +506,16 @@ func (l *etcdLock) Unlock() error {
 // Close closes the client connection
 func (s *Etcd) Close() {
 	return
+}
+
+func isKeyNotFoundError(err error) bool {
+	if err != nil {
+		if etcdError, ok := err.(*etcd.EtcdError); ok {
+			// Not a Directory or Not a file
+			if etcdError.ErrorCode == 100 || etcdError.ErrorCode == 102 || etcdError.ErrorCode == 104 {
+				return true
+			}
+		}
+	}
+	return false
 }

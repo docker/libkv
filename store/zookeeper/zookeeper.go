@@ -230,6 +230,9 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
 	keys, stat, err := s.client.Children(store.Normalize(directory))
 	if err != nil {
+		if err == zk.ErrNoNode {
+			return nil, store.ErrKeyNotFound
+		}
 		return nil, err
 	}
 
