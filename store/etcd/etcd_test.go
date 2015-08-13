@@ -29,5 +29,9 @@ func TestEtcdStore(t *testing.T) {
 	kv := makeEtcdClient(t)
 	backup := makeEtcdClient(t)
 
-	testutils.RunTestStore(t, kv, backup)
+	testutils.RunTestCommon(t, kv)
+	testutils.RunTestAtomic(t, kv)
+	testutils.RunTestWatch(t, kv)
+	testutils.RunTestLock(t, kv)
+	testutils.RunTestTTL(t, kv, backup)
 }

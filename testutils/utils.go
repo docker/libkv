@@ -8,19 +8,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// RunTestStore is an helper testing method that is
-// called by each K/V backend sub-package testing
-func RunTestStore(t *testing.T, kv store.Store, backup store.Store) {
+// RunTestCommon tests the minimal required APIs which
+// should be supported by all K/V backends
+func RunTestCommon(t *testing.T, kv store.Store) {
 	testPutGetDeleteExists(t, kv)
-	testWatch(t, kv)
-	testWatchTree(t, kv)
+	testList(t, kv)
+	testDeleteTree(t, kv)
+}
+
+// RunTestAtomic tests the Atomic operations by the K/V
+// backends
+func RunTestAtomic(t *testing.T, kv store.Store) {
 	testAtomicPut(t, kv)
 	testAtomicPutCreate(t, kv)
 	testAtomicDelete(t, kv)
+}
+
+// RunTestWatch tests the watch/monitor APIs supported
+// by the K/V backends.
+func RunTestWatch(t *testing.T, kv store.Store) {
+	testWatch(t, kv)
+	testWatchTree(t, kv)
+}
+
+// RunTestLock tests the KV pair Lock/Unlock APIs supported
+// by the K/V backends.
+func RunTestLock(t *testing.T, kv store.Store) {
 	testLockUnlock(t, kv)
+}
+
+// RunTestTTL tests the TTL funtionality of the K/V backend.
+func RunTestTTL(t *testing.T, kv store.Store, backup store.Store) {
 	testPutTTL(t, kv, backup)
-	testList(t, kv)
-	testDeleteTree(t, kv)
 }
 
 func testPutGetDeleteExists(t *testing.T, kv store.Store) {
