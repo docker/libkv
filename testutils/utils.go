@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -43,44 +44,50 @@ func RunTestTTL(t *testing.T, kv store.Store, backup store.Store) {
 }
 
 func testPutGetDeleteExists(t *testing.T, kv store.Store) {
-	key := "testfoo"
-	value := []byte("bar")
-
-	// Put the key
-	err := kv.Put(key, value, nil)
-	assert.NoError(t, err)
-
-	// Get should return the value and an incremented index
-	pair, err := kv.Get(key)
-	assert.NoError(t, err)
-	if assert.NotNil(t, pair) {
-		assert.NotNil(t, pair.Value)
-	}
-	assert.Equal(t, pair.Value, value)
-	assert.NotEqual(t, pair.LastIndex, 0)
-
 	// Get a not exist key should return ErrKeyNotFound
-	pair, err = kv.Get("/testPutGetDelete_not_exist_key")
+	pair, err := kv.Get("/testPutGetDelete_not_exist_key")
 	assert.Equal(t, store.ErrKeyNotFound, err)
 
-	// Exists should return true
-	exists, err := kv.Exists(key)
-	assert.NoError(t, err)
-	assert.True(t, exists)
+	value := []byte("bar")
+	for _, key := range []string{
+		"testfoo",
+		"testfoo/",
+		"testfoo/testbar/",
+		"testfoo/testbar/testfoobar",
+	} {
+		failMsg := fmt.Sprintf("Fail key %s", key)
+		// Put the key
+		err = kv.Put(key, value, nil)
+		assert.NoError(t, err, failMsg)
 
-	// Delete the key
-	err = kv.Delete(key)
-	assert.NoError(t, err)
+		// Get should return the value and an incremented index
+		pair, err = kv.Get(key)
+		assert.NoError(t, err, failMsg)
+		if assert.NotNil(t, pair, failMsg) {
+			assert.NotNil(t, pair.Value, failMsg)
+		}
+		assert.Equal(t, pair.Value, value, failMsg)
+		assert.NotEqual(t, pair.LastIndex, 0, failMsg)
 
-	// Get should fail
-	pair, err = kv.Get(key)
-	assert.Error(t, err)
-	assert.Nil(t, pair)
+		// Exists should return true
+		exists, err := kv.Exists(key)
+		assert.NoError(t, err, failMsg)
+		assert.True(t, exists, failMsg)
 
-	// Exists should return false
-	exists, err = kv.Exists(key)
-	assert.NoError(t, err)
-	assert.False(t, exists)
+		// Delete the key
+		err = kv.Delete(key)
+		assert.NoError(t, err, failMsg)
+
+		// Get should fail
+		pair, err = kv.Get(key)
+		assert.Error(t, err, failMsg)
+		assert.Nil(t, pair, failMsg)
+
+		// Exists should return false
+		exists, err = kv.Exists(key)
+		assert.NoError(t, err, failMsg)
+		assert.False(t, exists, failMsg)
+	}
 }
 
 func testWatch(t *testing.T, kv store.Store) {
@@ -396,24 +403,26 @@ func testList(t *testing.T, kv store.Store) {
 	assert.NoError(t, err)
 
 	// List should work and return the two correct values
-	pairs, err := kv.List(prefix)
-	assert.NoError(t, err)
-	if assert.NotNil(t, pairs) {
-		assert.Equal(t, len(pairs), 2)
-	}
-
-	// Check pairs, those are not necessarily in Put order
-	for _, pair := range pairs {
-		if pair.Key == firstKey {
-			assert.Equal(t, pair.Value, firstValue)
+	for _, parent := range []string{prefix, prefix + "/"} {
+		pairs, err := kv.List(parent)
+		assert.NoError(t, err)
+		if assert.NotNil(t, pairs) {
+			assert.Equal(t, len(pairs), 2)
 		}
-		if pair.Key == secondKey {
-			assert.Equal(t, pair.Value, secondValue)
+
+		// Check pairs, those are not necessarily in Put order
+		for _, pair := range pairs {
+			if pair.Key == firstKey {
+				assert.Equal(t, pair.Value, firstValue)
+			}
+			if pair.Key == secondKey {
+				assert.Equal(t, pair.Value, secondValue)
+			}
 		}
 	}
 
 	// List should fail: the key does not exist
-	pairs, err = kv.List("idontexist")
+	pairs, err := kv.List("idontexist")
 	assert.Equal(t, store.ErrKeyNotFound, err)
 	assert.Nil(t, pairs)
 }
