@@ -39,6 +39,15 @@ var (
 type Config struct {
 	TLS               *tls.Config
 	ConnectionTimeout time.Duration
+	ClientTLS         *ClientTLSConfig
+}
+
+// ClientTLSConfig contains data for a Client TLS configuration in the form
+//  the etcd client wants it.  Eventually we'll adapt it for ZK and Consul.
+type ClientTLSConfig struct {
+	CertFile   string
+	KeyFile    string
+	CACertFile string // Really should be []string, but etcd...
 }
 
 // Store represents the backend K/V storage

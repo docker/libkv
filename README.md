@@ -24,7 +24,7 @@ package main
 import (
 	"fmt"
 	"time"
-	
+
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
 	log "github.com/Sirupsen/logrus"
@@ -61,6 +61,10 @@ func main() {
 ```
 
 You can find other usage examples for `libkv` under the `docker/swarm` or `docker/libnetwork` repositories.
+
+## TLS
+
+The etcd backend supports etcd servers that require TLS Client Authentication.  Zookeeper and Consul support are planned.  This feature is somewhat experimental and the store.ClientTLSConfig struct may change to accommodate the additional backends.
 
 ## Warning
 
