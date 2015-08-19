@@ -43,12 +43,22 @@ func Register() {
 func New(addrs []string, options *store.Config) (store.Store, error) {
 	s := &Etcd{}
 
-	entries := store.CreateEndpoints(addrs, "http")
-	s.client = etcd.NewClient(entries)
-
+	var entries []string
+	if options != nil && options.ClientTLS != nil {
+		entries = store.CreateEndpoints(addrs, "https")
+		var err error
+		s.client, err = etcd.NewTLSClient(entries, options.ClientTLS.CertFile, options.ClientTLS.KeyFile, options.ClientTLS.CACertFile)
+		if err != nil {
+			return s, err
+		}
+	} else {
+		entries = store.CreateEndpoints(addrs, "http")
+		s.client = etcd.NewClient(entries)
+	}
 	// Set options
 	if options != nil {
-		if options.TLS != nil {
+		if options.TLS != nil && options.ClientTLS == nil {
+			// NewTLSClient already does this.
 			s.setTLS(options.TLS)
 		}
 		if options.ConnectionTimeout != 0 {
