@@ -9,7 +9,7 @@ import (
 )
 
 func makeBoltDBClient(t *testing.T) store.Store {
-	kv, err := New([]string{"/tmp/__boltdbtest"}, &store.Config{Bucket: "boltDBTest"})
+	kv, err := New([]string{"/tmp/not_exist_dir/__boltdbtest"}, &store.Config{Bucket: "boltDBTest"})
 
 	if err != nil {
 		t.Fatalf("cannot create store: %v", err)
@@ -24,5 +24,5 @@ func TestBoldDBStore(t *testing.T) {
 	testutils.RunTestCommon(t, kv)
 	testutils.RunTestAtomic(t, kv)
 
-	_ = os.Remove("/tmp/__boltdbtest")
+	_ = os.Remove("/tmp/not_exist_dir/__boltdbtest")
 }
