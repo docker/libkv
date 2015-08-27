@@ -119,6 +119,9 @@ func (s *Zookeeper) Put(key string, value []byte, opts *store.WriteOptions) erro
 // Delete a value at "key"
 func (s *Zookeeper) Delete(key string) error {
 	err := s.client.Delete(s.normalize(key), -1)
+	if err == zk.ErrNoNode {
+		return store.ErrKeyNotFound
+	}
 	return err
 }
 

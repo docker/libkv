@@ -50,10 +50,10 @@ func testPutGetDeleteExists(t *testing.T, kv store.Store) {
 
 	value := []byte("bar")
 	for _, key := range []string{
-		"testfoo",
-		"testfoo/",
-		"testfoo/testbar/",
-		"testfoo/testbar/testfoobar",
+		"testPutGetDeleteExists",
+		"testPutGetDeleteExists/",
+		"testPutGetDeleteExists/testbar/",
+		"testPutGetDeleteExists/testbar/testfoobar",
 	} {
 		failMsg := fmt.Sprintf("Fail key %s", key)
 		// Put the key
@@ -91,7 +91,7 @@ func testPutGetDeleteExists(t *testing.T, kv store.Store) {
 }
 
 func testWatch(t *testing.T, kv store.Store) {
-	key := "hello"
+	key := "testWatch"
 	value := []byte("world")
 	newValue := []byte("world!")
 
@@ -148,15 +148,15 @@ func testWatch(t *testing.T, kv store.Store) {
 }
 
 func testWatchTree(t *testing.T, kv store.Store) {
-	dir := "tree"
+	dir := "testWatchTree"
 
-	node1 := "tree/node1"
+	node1 := "testWatchTree/node1"
 	value1 := []byte("node1")
 
-	node2 := "tree/node2"
+	node2 := "testWatchTree/node2"
 	value2 := []byte("node2")
 
-	node3 := "tree/node3"
+	node3 := "testWatchTree/node3"
 	value3 := []byte("node3")
 
 	err := kv.Put(node1, value1, nil)
@@ -202,7 +202,7 @@ func testWatchTree(t *testing.T, kv store.Store) {
 }
 
 func testAtomicPut(t *testing.T, kv store.Store) {
-	key := "hello"
+	key := "testAtomicPut"
 	value := []byte("world")
 
 	// Put the key
@@ -219,18 +219,18 @@ func testAtomicPut(t *testing.T, kv store.Store) {
 	assert.NotEqual(t, pair.LastIndex, 0)
 
 	// This CAS should fail: previous exists.
-	success, _, err := kv.AtomicPut("hello", []byte("WORLD"), nil, nil)
+	success, _, err := kv.AtomicPut(key, []byte("WORLD"), nil, nil)
 	assert.Error(t, err)
 	assert.False(t, success)
 
 	// This CAS should succeed
-	success, _, err = kv.AtomicPut("hello", []byte("WORLD"), pair, nil)
+	success, _, err = kv.AtomicPut(key, []byte("WORLD"), pair, nil)
 	assert.NoError(t, err)
 	assert.True(t, success)
 
 	// This CAS should fail, key exists.
 	pair.LastIndex = 0
-	success, _, err = kv.AtomicPut("hello", []byte("WORLDWORLD"), pair, nil)
+	success, _, err = kv.AtomicPut(key, []byte("WORLDWORLD"), pair, nil)
 	assert.Error(t, err)
 	assert.False(t, success)
 }
@@ -238,7 +238,7 @@ func testAtomicPut(t *testing.T, kv store.Store) {
 func testAtomicPutCreate(t *testing.T, kv store.Store) {
 	// Use a key in a new directory to ensure Stores will create directories
 	// that don't yet exist.
-	key := "put/create"
+	key := "testAtomicPutCreate/create"
 	value := []byte("putcreate")
 
 	// AtomicPut the key, previous = nil indicates create.
@@ -263,14 +263,10 @@ func testAtomicPutCreate(t *testing.T, kv store.Store) {
 	success, _, err = kv.AtomicPut(key, []byte("PUTCREATE"), pair, nil)
 	assert.NoError(t, err)
 	assert.True(t, success)
-
-	// Delete the key, ensures runs of the test don't interfere with each other.
-	err = kv.DeleteTree("put")
-	assert.NoError(t, err)
 }
 
 func testAtomicDelete(t *testing.T, kv store.Store) {
-	key := "atomic"
+	key := "testAtomicDelete"
 	value := []byte("world")
 
 	// Put the key
@@ -302,7 +298,7 @@ func testAtomicDelete(t *testing.T, kv store.Store) {
 }
 
 func testLockUnlock(t *testing.T, kv store.Store) {
-	key := "foo"
+	key := "testLockUnlock"
 	value := []byte("bar")
 
 	// We should be able to create a new lock on key
@@ -344,7 +340,7 @@ func testLockUnlock(t *testing.T, kv store.Store) {
 }
 
 func testPutTTL(t *testing.T, kv store.Store, otherConn store.Store) {
-	firstKey := "first"
+	firstKey := "testPutTTL"
 	firstValue := []byte("foo")
 
 	secondKey := "second"
@@ -386,12 +382,12 @@ func testPutTTL(t *testing.T, kv store.Store, otherConn store.Store) {
 }
 
 func testList(t *testing.T, kv store.Store) {
-	prefix := "nodes"
+	prefix := "testList"
 
-	firstKey := "nodes/first"
+	firstKey := "testList/first"
 	firstValue := []byte("first")
 
-	secondKey := "nodes/second"
+	secondKey := "testList/second"
 	secondValue := []byte("second")
 
 	// Put the first key
@@ -428,12 +424,12 @@ func testList(t *testing.T, kv store.Store) {
 }
 
 func testDeleteTree(t *testing.T, kv store.Store) {
-	prefix := "nodes"
+	prefix := "testDeleteTree"
 
-	firstKey := "nodes/first"
+	firstKey := "testDeleteTree/first"
 	firstValue := []byte("first")
 
-	secondKey := "nodes/second"
+	secondKey := "testDeleteTree/second"
 	secondValue := []byte("second")
 
 	// Put the first key
@@ -474,4 +470,25 @@ func testDeleteTree(t *testing.T, kv store.Store) {
 	pair, err = kv.Get(secondKey)
 	assert.Error(t, err)
 	assert.Nil(t, pair)
+}
+
+// RunCleanup cleans up keys introduced by the tests
+func RunCleanup(t *testing.T, kv store.Store) {
+	for _, key := range []string{
+		"testPutGetDeleteExists",
+		"testWatch",
+		"testWatchTree",
+		"testAtomicPut",
+		"testAtomicPutCreate",
+		"testAtomicDelete",
+		"testLockUnlock",
+		"testPutTTL",
+		"testList",
+		"testDeleteTree",
+	} {
+		err := kv.DeleteTree(key)
+		assert.True(t, err == nil || err == store.ErrKeyNotFound, fmt.Sprintf("failed to delete tree key %s: %v", key, err))
+		err = kv.Delete(key)
+		assert.True(t, err == nil || err == store.ErrKeyNotFound, fmt.Sprintf("failed to delete key %s: %v", key, err))
+	}
 }
