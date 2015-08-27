@@ -9,9 +9,6 @@ import (
 )
 
 const (
-	// SOH control character
-	SOH = "\x01"
-
 	defaultTimeout = 10 * time.Second
 )
 
@@ -69,12 +66,6 @@ func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
 		return nil, err
 	}
 
-	// FIXME handle very rare cases where Get returns the
-	// SOH control character instead of the actual value
-	if string(resp) == SOH {
-		return s.Get(s.normalize(key))
-	}
-
 	pair = &store.KVPair{
 		Key:       key,
 		Value:     resp,
@@ -90,10 +81,10 @@ func (s *Zookeeper) createFullPath(path []string, ephemeral bool) error {
 	for i := 1; i <= len(path); i++ {
 		newpath := "/" + strings.Join(path[:i], "/")
 		if i == len(path) && ephemeral {
-			_, err := s.client.Create(newpath, []byte{1}, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+			_, err := s.client.Create(newpath, []byte{}, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
 			return err
 		}
-		_, err := s.client.Create(newpath, []byte{1}, 0, zk.WorldACL(zk.PermAll))
+		_, err := s.client.Create(newpath, []byte{}, 0, zk.WorldACL(zk.PermAll))
 		if err != nil {
 			// Skip if node already exists
 			if err != zk.ErrNodeExists {
