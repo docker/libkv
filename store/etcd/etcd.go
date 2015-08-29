@@ -160,6 +160,9 @@ func (s *Etcd) Put(key string, value []byte, opts *store.WriteOptions) error {
 // Delete a value at "key"
 func (s *Etcd) Delete(key string) error {
 	_, err := s.client.Delete(store.Normalize(key), false)
+	if isKeyNotFoundError(err) {
+		return store.ErrKeyNotFound
+	}
 	return err
 }
 
@@ -366,6 +369,9 @@ func (s *Etcd) List(directory string) ([]*store.KVPair, error) {
 // DeleteTree deletes a range of keys under a given directory
 func (s *Etcd) DeleteTree(directory string) error {
 	_, err := s.client.Delete(store.Normalize(directory), true)
+	if isKeyNotFoundError(err) {
+		return store.ErrKeyNotFound
+	}
 	return err
 }
 

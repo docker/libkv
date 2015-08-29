@@ -190,6 +190,9 @@ func (s *Consul) Put(key string, value []byte, opts *store.WriteOptions) error {
 
 // Delete a value at "key"
 func (s *Consul) Delete(key string) error {
+	if _, err := s.Get(key); err != nil {
+		return err
+	}
 	_, err := s.client.KV().Delete(s.normalize(key), nil)
 	return err
 }
@@ -234,6 +237,9 @@ func (s *Consul) List(directory string) ([]*store.KVPair, error) {
 
 // DeleteTree deletes a range of keys under a given directory
 func (s *Consul) DeleteTree(directory string) error {
+	if _, err := s.List(directory); err != nil {
+		return err
+	}
 	_, err := s.client.KV().DeleteTree(s.normalize(directory), nil)
 	return err
 }
