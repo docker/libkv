@@ -43,23 +43,28 @@ func Register() {
 func New(addrs []string, options *store.Config) (store.Store, error) {
 	s := &Etcd{}
 
-	var entries []string
+	var (
+		entries []string
+		err     error
+	)
+
+	// Create the etcd client
 	if options != nil && options.ClientTLS != nil {
 		entries = store.CreateEndpoints(addrs, "https")
-		var err error
 		s.client, err = etcd.NewTLSClient(entries, options.ClientTLS.CertFile, options.ClientTLS.KeyFile, options.ClientTLS.CACertFile)
 		if err != nil {
-			return s, err
+			return nil, err
 		}
 	} else {
 		entries = store.CreateEndpoints(addrs, "http")
 		s.client = etcd.NewClient(entries)
 	}
+
 	// Set options
 	if options != nil {
-		if options.TLS != nil && options.ClientTLS == nil {
-			// NewTLSClient already does this.
-			s.setTLS(options.TLS)
+		// Plain TLS config overrides ClientTLS if specified
+		if options.TLS != nil {
+			s.setTLS(options.TLS, addrs)
 		}
 		if options.ConnectionTimeout != 0 {
 			s.setTimeout(options.ConnectionTimeout)
@@ -77,16 +82,10 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 	return s, nil
 }
 
-// SetTLS sets the tls configuration given the path
-// of certificate files
-func (s *Etcd) setTLS(tls *tls.Config) {
-	// Change to https scheme
-	var addrs []string
-	entries := s.client.GetCluster()
-	for _, entry := range entries {
-		addrs = append(addrs, strings.Replace(entry, "http", "https", -1))
-	}
-	s.client.SetCluster(addrs)
+// SetTLS sets the tls configuration given a tls.Config scheme
+func (s *Etcd) setTLS(tls *tls.Config, addrs []string) {
+	entries := store.CreateEndpoints(addrs, "https")
+	s.client.SetCluster(entries)
 
 	// Set transport
 	t := http.Transport{
