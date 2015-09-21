@@ -117,4 +117,4 @@ Want to hack on libkv? [Docker's contributions guidelines](https://github.com/do
 
 ##Copyright and license
 
-Code and documentation copyright 2015 Docker, inc. Code released under the Apache 2.0 license. Docs released under Creative commons.
+Code and documentation copyright 2015 Docker, inc. Code released under the Apache 2.0 license.
