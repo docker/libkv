@@ -2,7 +2,10 @@ package consul
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -62,6 +65,13 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 
 	// Set options
 	if options != nil {
+		if options.ClientTLS != nil {
+			err := s.setClientTLS(options.ClientTLS.CertFile, options.ClientTLS.KeyFile, options.ClientTLS.CACertFile, options.ClientTLS.InsecureSkipVerify)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// Plain TLS config overrides ClientTLS if specified
 		if options.TLS != nil {
 			s.setTLS(options.TLS)
 		}
@@ -82,10 +92,46 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 
 // SetTLS sets Consul TLS options
 func (s *Consul) setTLS(tls *tls.Config) {
+	s.config.Scheme = "https"
 	s.config.HttpClient.Transport = &http.Transport{
 		TLSClientConfig: tls,
 	}
+}
+
+// Sets Consul ClientTLS options
+func (s *Consul) setClientTLS(certFile string, keyFile string, caCert string, insecureSkipVerify bool) error {
 	s.config.Scheme = "https"
+
+	tlsClientConfig := &tls.Config{
+		InsecureSkipVerify: insecureSkipVerify,
+		ServerName:         s.config.Address,
+	}
+
+	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return fmt.Errorf("client tls setup failed: %v", err)
+	}
+
+	tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+
+	caPool := x509.NewCertPool()
+
+	data, err := ioutil.ReadFile(caCert)
+	if err != nil {
+		return fmt.Errorf("failed to read CA file: %v", err)
+	}
+
+	if !caPool.AppendCertsFromPEM(data) {
+		return fmt.Errorf("failed to parse CA certificate")
+	}
+
+	tlsClientConfig.RootCAs = caPool
+
+	s.config.HttpClient.Transport = &http.Transport{
+		TLSClientConfig: tlsClientConfig,
+	}
+
+	return nil
 }
 
 // SetTimeout sets the timout for connecting to Consul
