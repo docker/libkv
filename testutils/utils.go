@@ -22,7 +22,7 @@ func RunTestCommon(t *testing.T, kv store.Store) {
 func RunTestAtomic(t *testing.T, kv store.Store) {
 	testAtomicPut(t, kv)
 	testAtomicPutCreate(t, kv)
-	testAtomicPutWithSlashSuffuxKey(t, kv)
+	testAtomicPutWithSlashSuffixKey(t, kv)
 	testAtomicDelete(t, kv)
 }
 
@@ -275,8 +275,8 @@ func testAtomicPutCreate(t *testing.T, kv store.Store) {
 	assert.True(t, success)
 }
 
-func testAtomicPutWithSlashSuffuxKey(t *testing.T, kv store.Store) {
-	k1 := "testAtomicPutWithSlashSuffuxKey/key/"
+func testAtomicPutWithSlashSuffixKey(t *testing.T, kv store.Store) {
+	k1 := "testAtomicPutWithSlashSuffixKey/key/"
 	success, _, err := kv.AtomicPut(k1, []byte{}, nil, nil)
 	assert.Nil(t, err)
 	assert.True(t, success)
@@ -596,6 +596,7 @@ func testDeleteTree(t *testing.T, kv store.Store) {
 // RunCleanup cleans up keys introduced by the tests
 func RunCleanup(t *testing.T, kv store.Store) {
 	for _, key := range []string{
+		"testAtomicPutWithSlashSuffixKey",
 		"testPutGetDeleteExists",
 		"testWatch",
 		"testWatchTree",
