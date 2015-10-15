@@ -315,7 +315,7 @@ func testAtomicDelete(t *testing.T, kv store.Store) {
 
 	// Delete a non-existent key; should fail
 	success, err = kv.AtomicDelete(key, pair)
-	assert.Error(t, err)
+	assert.Error(t, store.ErrKeyNotFound)
 	assert.False(t, success)
 }
 
