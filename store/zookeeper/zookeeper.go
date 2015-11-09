@@ -1,6 +1,7 @@
 package zookeeper
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -237,35 +238,35 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 
 // List child nodes of a given directory
 func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
-	keys, stat, err := s.client.Children(s.normalize(directory))
+	kv := []*store.KVPair{}
+	children, stat, err := s.client.Children(s.normalize(directory))
 	if err != nil {
 		if err == zk.ErrNoNode {
 			return nil, store.ErrKeyNotFound
 		}
 		return nil, err
 	}
-
-	kv := []*store.KVPair{}
-
-	// FIXME Costly Get request for each child key..
-	for _, key := range keys {
-		pair, err := s.Get(strings.TrimSuffix(directory, "/") + s.normalize(key))
-		if err != nil {
-			// If node is not found: List is out of date, retry
-			if err == zk.ErrNoNode {
-				return s.List(directory)
+	if stat.NumChildren > 0 {
+		sort.Sort(sort.StringSlice(children))
+		for _, child := range children {
+			pair, err := s.Get(strings.TrimSuffix(directory, "/") + s.normalize(child))
+			if err != nil {
+				return nil, err
 			}
-			return nil, err
+			kv = append(kv, &store.KVPair{
+				Key:       pair.Key,
+				Value:     []byte(pair.Value),
+				LastIndex: uint64(stat.Version),
+			})
+			//recursive over each child
+			subChildres, err := s.List(strings.TrimSuffix(directory, "/") + s.normalize(child))
+			if err != nil {
+				return nil, err
+			}
+			kv = append(kv, subChildres...)
 		}
-
-		kv = append(kv, &store.KVPair{
-			Key:       key,
-			Value:     []byte(pair.Value),
-			LastIndex: uint64(stat.Version),
-		})
 	}
-
-	return kv, nil
+	return kv, err
 }
 
 // DeleteTree deletes a range of keys under a given directory
@@ -277,9 +278,10 @@ func (s *Zookeeper) DeleteTree(directory string) error {
 
 	var reqs []interface{}
 
+	sort.Sort(sort.Reverse(store.KVPareSlice(pairs)))
 	for _, pair := range pairs {
 		reqs = append(reqs, &zk.DeleteRequest{
-			Path:    s.normalize(directory + "/" + pair.Key),
+			Path:    s.normalize(pair.Key),
 			Version: -1,
 		})
 	}

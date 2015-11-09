@@ -128,3 +128,10 @@ type Locker interface {
 	Lock(stopChan chan struct{}) (<-chan struct{}, error)
 	Unlock() error
 }
+
+// KVPareSlice sortable
+type KVPareSlice []*KVPair
+
+func (m KVPareSlice) Len() int           { return len(m) }
+func (m KVPareSlice) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m KVPareSlice) Less(i, j int) bool { return m[i].Key < m[j].Key }
