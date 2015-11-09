@@ -389,6 +389,7 @@ func (s *Etcd) AtomicDelete(key string, previous *store.KVPair) (bool, error) {
 
 // List child nodes of a given directory
 func (s *Etcd) List(directory string) ([]*store.KVPair, error) {
+	var dumpNode func(node *etcd.Node) []*store.KVPair
 	getOpts := &etcd.GetOptions{
 		Quorum:    true,
 		Recursive: true,
@@ -402,16 +403,21 @@ func (s *Etcd) List(directory string) ([]*store.KVPair, error) {
 		}
 		return nil, err
 	}
-
-	kv := []*store.KVPair{}
-	for _, n := range resp.Node.Nodes {
-		kv = append(kv, &store.KVPair{
-			Key:       n.Key,
-			Value:     []byte(n.Value),
-			LastIndex: n.ModifiedIndex,
-		})
+	dumpNode = func(node *etcd.Node) []*store.KVPair {
+		kv := []*store.KVPair{}
+		if node != resp.Node {
+			kv = append(kv, &store.KVPair{
+				Key:       strings.TrimPrefix(node.Key, "/"),
+				Value:     []byte(node.Value),
+				LastIndex: node.ModifiedIndex,
+			})
+		}
+		for _, v := range node.Nodes {
+			kv = append(kv, dumpNode(v)...)
+		}
+		return kv
 	}
-	return kv, nil
+	return dumpNode(resp.Node), nil
 }
 
 // DeleteTree deletes a range of keys under a given directory
