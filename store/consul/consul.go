@@ -420,7 +420,18 @@ func (s *Consul) NewLock(key string, options *store.LockOptions) (store.Locker, 
 // doing so. It returns a channel that is closed if our
 // lock is lost or if an error occurs
 func (l *consulLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
-	return l.lock.Lock(stopChan)
+	lockCh, err := l.lock.Lock(stopChan)
+	if err != nil {
+		// If we fail to acquire the lock, cleanup the session
+		if l.renewCh != nil {
+			close(l.renewCh)
+			l.renewCh = nil
+		}
+		return nil, err
+	}
+
+	// All good, we hold the lock
+	return lockCh, nil
 }
 
 // Unlock the "key". Calling unlock while
