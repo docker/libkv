@@ -186,6 +186,7 @@ func (s *Consul) Put(key string, value []byte, opts *store.WriteOptions) error {
 	p := &api.KVPair{
 		Key:   key,
 		Value: value,
+		Flags: api.LockFlagValue,
 	}
 
 	if opts != nil && opts.TTL > 0 {
@@ -436,7 +437,7 @@ func (l *consulLock) Unlock() error {
 // modified in the meantime, throws an error if this is the case
 func (s *Consul) AtomicPut(key string, value []byte, previous *store.KVPair, options *store.WriteOptions) (bool, *store.KVPair, error) {
 
-	p := &api.KVPair{Key: s.normalize(key), Value: value}
+	p := &api.KVPair{Key: s.normalize(key), Value: value, Flags: api.LockFlagValue}
 
 	if previous == nil {
 		// Consul interprets ModifyIndex = 0 as new key.
@@ -471,7 +472,7 @@ func (s *Consul) AtomicDelete(key string, previous *store.KVPair) (bool, error) 
 		return false, store.ErrPreviousNotSpecified
 	}
 
-	p := &api.KVPair{Key: s.normalize(key), ModifyIndex: previous.LastIndex}
+	p := &api.KVPair{Key: s.normalize(key), ModifyIndex: previous.LastIndex, Flags: api.LockFlagValue}
 
 	// Extra Get operation to check on the key
 	_, err := s.Get(key)
