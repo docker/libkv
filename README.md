@@ -10,7 +10,7 @@ The goal of `libkv` is to abstract common store operations for multiple distribu
 
 For example, you can use it to store your metadata or for service discovery to register machines and endpoints inside your cluster.
 
-You can also easily implement a generic *Leader Election* on top of it (see the [swarm/leadership](https://github.com/docker/swarm/tree/master/leadership) package).
+You can also easily implement a generic *Leader Election* on top of it (see the [docker/leadership](https://github.com/docker/leadership) repository).
 
 As of now, `libkv` offers support for `Consul`, `Etcd`, `Zookeeper` (**Distributed** store) and `BoltDB` (**Local** store).
 
@@ -83,7 +83,7 @@ Please refer to the `docs/compatibility.md` to see what are the special cases fo
 
 Other than those special cases, you should expect the same experience for basic operations like `Get`/`Put`, etc.
 
-Calls like `WatchTree` may return different events (or number of events) depending on the backend (for now, `Etcd` and `Consul` will likely return more events than `Zookeeper` that you should triage properly). Although you should be able to use it successfully to watch on events in an interchangeable way (see the **swarm/leadership** or **swarm/discovery** packages in **docker/swarm**).
+Calls like `WatchTree` may return different events (or number of events) depending on the backend (for now, `Etcd` and `Consul` will likely return more events than `Zookeeper` that you should triage properly). Although you should be able to use it successfully to watch on events in an interchangeable way (see the **docker/leadership** repository or the **pkg/discovery/kv** package in **docker/docker**).
 
 ## TLS
 
