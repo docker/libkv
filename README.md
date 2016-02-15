@@ -30,7 +30,7 @@ You can find examples of usage for `libkv` under in `docs/examples.go`. Optional
 
 `libkv` supports:
 - Consul versions >= `0.5.1` because it uses Sessions with `Delete` behavior for the use of `TTLs` (mimics zookeeper's Ephemeral node support), If you don't plan to use `TTLs`: you can use Consul version `0.4.0+`.
-- Etcd versions >= `2.0` because it uses the new `coreos/etcd/client`, this might change in the future as the support for `APIv3` comes along and adds mor capabilities.
+- Etcd versions >= `2.0` because it uses the new `coreos/etcd/client`, this might change in the future as the support for `APIv3` comes along and adds more capabilities.
 - Zookeeper versions >= `3.4.5`. Although this might work with previous version but this remains untested as of now.
 - Boltdb, which shouldn't be subject to any version dependencies.
 
