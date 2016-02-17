@@ -45,7 +45,7 @@ func RunTestLockTTL(t *testing.T, kv store.Store, backup store.Store) {
 	testLockTTL(t, kv, backup)
 }
 
-// RunTestTTL tests the TTL funtionality of the K/V backend.
+// RunTestTTL tests the TTL functionality of the K/V backend.
 func RunTestTTL(t *testing.T, kv store.Store, backup store.Store) {
 	testPutTTL(t, kv, backup)
 }

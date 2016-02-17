@@ -512,15 +512,15 @@ func (l *etcdLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
 			// Wait for the key to be available or for
 			// a signal to stop trying to lock the key
 			select {
-			case _ = <-free:
+			case <-free:
 				break
 			case err := <-errorCh:
 				return nil, err
-			case _ = <-stopChan:
+			case <-stopChan:
 				return nil, ErrAbortTryLock
 			}
 
-			// Delete or Expire event occured
+			// Delete or Expire event occurred
 			// Retry
 		}
 	}
