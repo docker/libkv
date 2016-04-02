@@ -18,11 +18,13 @@ before_script:
   - script/travis_consul.sh 0.6.3
   - script/travis_etcd.sh 3.0.0
   - script/travis_zk.sh 3.5.1-alpha
+  - script/travis_redis.sh 3.2.6
 
 script:
   - ./consul agent -server -bootstrap -advertise=127.0.0.1 -data-dir /tmp/consul -config-file=./config.json 1>/dev/null &
   - ./etcd/etcd --listen-client-urls 'http://0.0.0.0:4001' --advertise-client-urls 'http://127.0.0.1:4001' >/dev/null 2>&1 &
   - ./zk/bin/zkServer.sh start ./zk/conf/zoo.cfg 1> /dev/null
+  - ./redis/src/redis-server &
   - script/validate-gofmt
   - go vet ./...
   - fgt golint ./...
