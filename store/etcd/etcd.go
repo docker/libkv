@@ -41,7 +41,7 @@ type etcdLock struct {
 
 const (
 	periodicSync      = 5 * time.Minute
-	defaultLockTTL    = 20 * time.Second
+	defaultLockTTL    = 15 * time.Second
 	defaultUpdateTime = 5 * time.Second
 )
 

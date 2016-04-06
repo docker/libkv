@@ -397,6 +397,11 @@ func (s *Consul) NewLock(key string, options *store.LockOptions) (store.Locker, 
 			// Place the session on lock
 			lockOpts.Session = session
 
+			// Monitor retries in case of store restart
+			// or network high latency/erratic behavior
+			lockOpts.MonitorRetries = 3
+			lockOpts.MonitorRetryTime = 3 * time.Second
+
 			// Renew the session ttl lock periodically
 			go s.client.Session().RenewPeriodic(entry.TTL, session, nil, options.RenewLock)
 			lock.renewCh = options.RenewLock
@@ -421,7 +426,18 @@ func (s *Consul) NewLock(key string, options *store.LockOptions) (store.Locker, 
 // doing so. It returns a channel that is closed if our
 // lock is lost or if an error occurs
 func (l *consulLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
-	return l.lock.Lock(stopChan)
+	lockCh, err := l.lock.Lock(stopChan)
+	if err != nil {
+		// If we fail to acquire the lock, cleanup the session
+		if l.renewCh != nil {
+			close(l.renewCh)
+			l.renewCh = nil
+		}
+		return nil, err
+	}
+
+	// All good, we hold the lock
+	return lockCh, nil
 }
 
 // Unlock the "key". Calling unlock while
