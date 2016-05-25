@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
-	zk "github.com/samuel/go-zookeeper/zk"
+	zk "github.com/talbright/go-zookeeper/zk"
 )
 
 const (
@@ -182,7 +182,7 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 					}
 				}
 			case <-stopCh:
-				// There is no way to stop GetW so just quit
+				s.client.CancelWatch(eventCh)
 				return
 			}
 		}
@@ -226,7 +226,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 					}
 				}
 			case <-stopCh:
-				// There is no way to stop GetW so just quit
+				s.client.CancelWatch(eventCh)
 				return
 			}
 		}
