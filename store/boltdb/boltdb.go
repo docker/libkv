@@ -45,7 +45,7 @@ type BoltDB struct {
 
 const (
 	libkvmetadatalen = 8
-	transientTimeout = time.Duration(10) * time.Second
+	transientTimeout = time.Duration(120) * time.Second
 )
 
 // Register registers boltdb to libkv
