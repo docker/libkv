@@ -44,6 +44,7 @@ type Config struct {
 	ClientTLS         *ClientTLSConfig
 	TLS               *tls.Config
 	ConnectionTimeout time.Duration
+	SyncPeriod        time.Duration
 	Bucket            string
 	PersistConnection bool
 	Username          string
