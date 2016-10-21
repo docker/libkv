@@ -108,8 +108,8 @@ func testWatch(t *testing.T, kv store.Store) {
 	assert.NoError(t, err)
 
 	stopCh := make(<-chan struct{})
-	events, err := kv.Watch(key, stopCh)
-	assert.NoError(t, err)
+	events, errorCh := kv.Watch(key, stopCh)
+	assert.NotNil(t, errorCh)
 	assert.NotNil(t, events)
 
 	// Update loop
@@ -148,6 +148,8 @@ func testWatch(t *testing.T, kv store.Store) {
 			if eventCount >= 4 {
 				return
 			}
+		case err := <-errorCh:
+			t.Error(err)
 		case <-time.After(4 * time.Second):
 			t.Fatal("Timeout reached")
 			return
@@ -175,8 +177,8 @@ func testWatchTree(t *testing.T, kv store.Store) {
 	assert.NoError(t, err)
 
 	stopCh := make(<-chan struct{})
-	events, err := kv.WatchTree(dir, stopCh)
-	assert.NoError(t, err)
+	events, errorCh := kv.WatchTree(dir, stopCh)
+	assert.NotNil(t, errorCh)
 	assert.NotNil(t, events)
 
 	// Update loop
@@ -204,6 +206,8 @@ func testWatchTree(t *testing.T, kv store.Store) {
 				return
 			}
 			eventCount++
+		case err := <-errorCh:
+			t.Error(err)
 		case <-time.After(4 * time.Second):
 			t.Fatal("Timeout reached")
 			return
