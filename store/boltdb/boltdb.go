@@ -459,11 +459,11 @@ func (b *BoltDB) NewLock(key string, options *store.LockOptions) (store.Locker, 
 }
 
 // Watch has to implemented at the library level since its not supported by BoltDB
-func (b *BoltDB) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
-	return nil, store.ErrCallNotSupported
+func (b *BoltDB) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, <-chan error) {
+	return nil, store.ErrorChannelWith(store.ErrCallNotSupported)
 }
 
 // WatchTree has to implemented at the library level since its not supported by BoltDB
-func (b *BoltDB) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
-	return nil, store.ErrCallNotSupported
+func (b *BoltDB) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, <-chan error) {
+	return nil, store.ErrorChannelWith(store.ErrCallNotSupported)
 }
