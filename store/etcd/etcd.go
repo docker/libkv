@@ -217,19 +217,22 @@ func (s *Etcd) Exists(key string) (bool, error) {
 // on errors. Upon creation, the current value will first
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, <-chan error) {
 	opts := &etcd.WatcherOptions{Recursive: false}
 	watcher := s.client.Watcher(s.normalize(key), opts)
 
 	// watchCh is sending back events to the caller
 	watchCh := make(chan *store.KVPair)
+	errorCh := make(chan error)
 
 	go func() {
 		defer close(watchCh)
+		defer close(errorCh)
 
 		// Get the current value
 		pair, err := s.Get(key)
 		if err != nil {
+			errorCh <- err
 			return
 		}
 
@@ -247,6 +250,7 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 			result, err := watcher.Next(context.Background())
 
 			if err != nil {
+				errorCh <- err
 				return
 			}
 
@@ -258,7 +262,7 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // WatchTree watches for changes on a "directory"
@@ -266,19 +270,22 @@ func (s *Etcd) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, 
 // on errors. Upon creating a watch, the current childs values
 // will be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, <-chan error) {
 	watchOpts := &etcd.WatcherOptions{Recursive: true}
 	watcher := s.client.Watcher(s.normalize(directory), watchOpts)
 
 	// watchCh is sending back events to the caller
 	watchCh := make(chan []*store.KVPair)
+	errorCh := make(chan error)
 
 	go func() {
 		defer close(watchCh)
+		defer close(errorCh)
 
 		// Get child values
 		list, err := s.List(directory)
 		if err != nil {
+			errorCh <- err
 			return
 		}
 
@@ -296,11 +303,13 @@ func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*st
 			_, err := watcher.Next(context.Background())
 
 			if err != nil {
+				errorCh <- err
 				return
 			}
 
 			list, err = s.List(directory)
 			if err != nil {
+				errorCh <- err
 				return
 			}
 
@@ -308,7 +317,7 @@ func (s *Etcd) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*st
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // AtomicPut puts a value at "key" if the key has not been
