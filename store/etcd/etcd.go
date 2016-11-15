@@ -78,6 +78,9 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 		if options.Username != "" {
 			setCredentials(cfg, options.Username, options.Password)
 		}
+		if options.PersistConnection == false {
+			disableKeepAlive(cfg)
+		}
 	}
 
 	c, err := etcd.New(*cfg)
@@ -126,6 +129,20 @@ func setTimeout(cfg *etcd.Config, time time.Duration) {
 func setCredentials(cfg *etcd.Config, username, password string) {
 	cfg.Username = username
 	cfg.Password = password
+}
+
+// disableKeepAlive will set DisableKeepAlives to true.
+func disableKeepAlive(cfg *etcd.Config) {
+	var newTransport etcd.CancelableTransport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		DisableKeepAlives:   true,
+	}
+	cfg.Transport = newTransport
 }
 
 // Normalize the key for usage in Etcd
