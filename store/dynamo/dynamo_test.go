@@ -1,10 +1,10 @@
 package dynamo
 
 import (
+	"github.com/docker/libkv"
+	"github.com/docker/libkv/store"
+	"github.com/docker/libkv/testutils"
 	"github.com/stretchr/testify/assert"
-	"github.com/tskinn/libkv"
-	"github.com/tskinn/libkv/store"
-	"github.com/tskinn/libkv/testutils"
 	"testing"
 )
 
