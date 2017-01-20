@@ -19,6 +19,9 @@ var (
 	ErrMultipleEndpointsUnsupported = errors.New("dynamodb does not support multiple endpoints")
 )
 
+// NOTE:
+//  The primary key value of the table should a string named "Key"
+//  The attributes will be called "Index" and "Value"
 type DynamoDB struct {
 	tableName string
 	client    *dynamodb.DynamoDB
