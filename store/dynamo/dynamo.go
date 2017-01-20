@@ -10,6 +10,7 @@ import (
 	"github.com/tskinn/libkv"
 	"github.com/tskinn/libkv/store"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -84,41 +85,73 @@ func (d *DynamoDB) Get(key string) (*store.KVPair, error) {
 	}
 
 	pair.Key = key
-	pair.Value = []byte(*resp.Item["Value"].S)
+	value, exists := resp.Item["Value"]
+	if exists {
+		pair.Value = []byte(*value.S)
+	}
 	pair.LastIndex, _ = strconv.ParseUint(*resp.Item["Index"].N, 10, 64)
 	return pair, nil
 }
 
-//
-func (d *DynamoDB) Put(key string, value []byte, opts *store.WriteOptions) error {
+func (d *DynamoDB) getParamsNoValue(key string) *dynamodb.UpdateItemInput {
+	// TODO do keys without values really need an index?
 	params := &dynamodb.UpdateItemInput{
 		TableName: aws.String(d.tableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			"Key": &dynamodb.AttributeValue{
+			"Key": {
 				S: aws.String(key),
 			},
 		},
-		UpdateExpression: aws.String("set #v = :v add #i :i"),
+		ReturnValues:     aws.String("ALL_NEW"),
+		UpdateExpression: aws.String("add #i :i"),
 		ExpressionAttributeNames: map[string]*string{
-			"#v": aws.String("Value"),
 			"#i": aws.String("Index"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":v": &dynamodb.AttributeValue{
-				S: aws.String(string(value[:])),
-			},
-			":i": &dynamodb.AttributeValue{
+			":i": {
 				N: aws.String("1"),
 			},
 		},
 	}
+	return params
+}
 
-	_, err := d.client.UpdateItem(params)
-	if err != nil {
-		return err
+func (d *DynamoDB) getParams(key string, value []byte) *dynamodb.UpdateItemInput {
+	params := &dynamodb.UpdateItemInput{
+		TableName: aws.String(d.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"Key": {
+				S: aws.String(key),
+			},
+		},
+		ReturnValues:     aws.String("ALL_NEW"),
+		UpdateExpression: aws.String("set #v = :v add #i :i"),
+		ExpressionAttributeNames: map[string]*string{
+			"#i": aws.String("Index"),
+			"#v": aws.String("Value"),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":i": {
+				N: aws.String("1"),
+			},
+			":v": {
+				S: aws.String(string(value[:])),
+			},
+		},
+	}
+	return params
+}
+
+//
+func (d *DynamoDB) Put(key string, value []byte, opts *store.WriteOptions) error {
+	params := d.getParams(key, value)
+	// DynamoDB doesn't allow empty values so remove the Value entirely
+	if len(value) == 0 {
+		params = d.getParamsNoValue(key)
 	}
 
-	return nil
+	_, err := d.client.UpdateItem(params)
+	return err
 }
 
 //
@@ -126,7 +159,7 @@ func (d *DynamoDB) Delete(key string) error {
 	// TODO
 	params := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"Key": &dynamodb.AttributeValue{
+			"Key": {
 				S: aws.String(key),
 			},
 		},
@@ -162,7 +195,7 @@ func (d *DynamoDB) List(directory string) ([]*store.KVPair, error) {
 			"#k": aws.String("Key"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":v": &dynamodb.AttributeValue{
+			":v": {
 				S: aws.String(directory),
 			},
 		},
@@ -179,8 +212,12 @@ func (d *DynamoDB) List(directory string) ([]*store.KVPair, error) {
 	}
 	for _, item := range resp.Items {
 		tPair := &store.KVPair{
-			Key:   *item["Key"].S,
-			Value: []byte(*item["Value"].S),
+			Key: *item["Key"].S,
+		}
+		// check to see if Value exists
+		val, exists := item["Value"]
+		if exists {
+			tPair.Value = []byte(*val.S)
 		}
 		pairs = append(pairs, tPair)
 	}
@@ -211,6 +248,8 @@ func (d *DynamoDB) DeleteTree(directory string) error {
 //   which might not be likely since AWS only suggests at most two processes reading
 //   from a dynamodb stream
 func (d *DynamoDB) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+	// since scans are expensive maybe we should keep all keys being watched in a map
+	// and consolidate our scans of the db into one scan
 	return nil, errors.New("Watch not supported")
 }
 
@@ -226,14 +265,78 @@ func (d *DynamoDB) NewLock(key string, options *store.LockOptions) (store.Locker
 
 // Not supported
 func (d *DynamoDB) AtomicPut(key string, value []byte, previous *store.KVPair, options *store.WriteOptions) (bool, *store.KVPair, error) {
-	// TODO use a conditional update and check if values are are same and put
-	return false, nil, errors.New("AtomicPut not supported")
+	kvPairSuccess := &store.KVPair{
+		Key:   key,
+		Value: value,
+	}
+	params := d.getParams(key, value)
+	if len(value) == 0 {
+		params = d.getParamsNoValue(key)
+	}
+
+	if previous != nil {
+		params.ConditionExpression = aws.String("#v = :pv AND #i = :pi")
+		params.ExpressionAttributeValues[":pv"] = &dynamodb.AttributeValue{
+			S: aws.String(string(previous.Value[:])),
+		}
+		params.ExpressionAttributeValues[":pi"] = &dynamodb.AttributeValue{
+			N: aws.String(strconv.FormatUint(previous.LastIndex, 10)),
+		}
+	} else {
+		params.ConditionExpression = aws.String("attribute_not_exists(#i)")
+	}
+
+	resp, err := d.client.UpdateItem(params)
+	if err != nil {
+		if strings.Contains(err.Error(), "ConditionalCheckFailedException") {
+			return false, nil, store.ErrKeyModified
+		}
+		return false, nil, err
+	}
+	if val, exists := resp.Attributes["Index"]; exists {
+		kvPairSuccess.LastIndex, _ = strconv.ParseUint(*val.N, 10, 64)
+	}
+	return true, kvPairSuccess, nil
 }
 
 // Not supported
 func (d *DynamoDB) AtomicDelete(key string, previous *store.KVPair) (bool, error) {
-	// TODO use a conditional update and check if values are are same and delete
-	return false, errors.New("AtomicDelete not supported")
+	if previous == nil {
+		if err := d.Delete(key); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	params := &dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"Key": {
+				S: aws.String(key),
+			},
+		},
+		TableName:           aws.String(d.tableName),
+		ConditionExpression: aws.String("#v = :v AND #i = :i"),
+		ExpressionAttributeNames: map[string]*string{
+			"#i": aws.String("Index"),
+			"#v": aws.String("Value"),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":i": {
+				N: aws.String(strconv.FormatUint(previous.LastIndex, 10)),
+			},
+			":v": {
+				S: aws.String(string(previous.Value[:])),
+			},
+		},
+	}
+
+	_, err := d.client.DeleteItem(params)
+	if err != nil {
+		if strings.Contains(err.Error(), "ConditionalCheckFailedException") {
+			return false, store.ErrKeyModified
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (d *DynamoDB) Close() {

@@ -39,5 +39,6 @@ func TestRegister(t *testing.T) {
 func TestDynamoDBStore(t *testing.T) {
 	kv := makeDynamoClient(t)
 	testutils.RunTestCommon(t, kv)
+	testutils.RunTestAtomic(t, kv)
 	testutils.RunCleanup(t, kv)
 }
