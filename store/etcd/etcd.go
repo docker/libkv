@@ -90,9 +90,7 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 	// Periodic Cluster Sync
 	go func() {
 		for {
-			if err := c.AutoSync(context.Background(), periodicSync); err != nil {
-				return
-			}
+			c.AutoSync(context.Background(), periodicSync)
 		}
 	}()
 
