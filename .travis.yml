@@ -13,6 +13,8 @@ before_install:
   - go get github.com/mattn/goveralls
   - go get github.com/golang/lint/golint
   - go get github.com/GeertJohan/fgt
+  # ca-certificates is needed for wget to work properly
+  - apt-get install ca-certificates
 
 before_script:
   - script/travis_consul.sh 0.6.3
