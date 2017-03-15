@@ -3,8 +3,7 @@ language: go
 go:
   - 1.7.1
 
-# let us have speedy Docker-based Travis workers
-sudo: false
+sudo: true
 
 before_install:
   # Symlink below is needed for Travis CI to work correctly on personal forks of libkv
