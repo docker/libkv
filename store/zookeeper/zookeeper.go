@@ -13,7 +13,7 @@ const (
 	// SOH control character
 	SOH = "\x01"
 
-	defaultTimeout = 10 * time.Second	
+	defaultTimeout = 10 * time.Second
 
 	syncRetryLimit = 5
 )
@@ -69,28 +69,9 @@ func (s *Zookeeper) setTimeout(time time.Duration) {
 // to use in conjunction to Atomic calls
 func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
 
-	var resp []byte
-	var meta *zk.Stat
-
-	// To guard against older versions of libkv
-	// creating and writing to znodes non-atomically, 
-	// We try to resync few times if we read SOH or 
-	// an empty string
-	for i := 0; i <= syncRetryLimit; i++ {
-		resp, meta, err = s.client.Get(s.normalize(key))
-
-		if err != nil {
-			if err == zk.ErrNoNode {
-				return nil, store.ErrKeyNotFound
-			}
-			return nil, err
-		}
-
-		if (string(resp) == SOH || string(resp) == "") && i < syncRetryLimit {
-			if _, err = s.client.Sync(s.normalize(key)); err != nil {
-				return nil, err
-			}
-		}
+	resp, meta, err := s.get(key)
+	if err != nil {
+		return nil, err
 	}
 
 	pair = &store.KVPair{
@@ -175,32 +156,30 @@ func (s *Zookeeper) Exists(key string) (bool, error) {
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
 func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
-	// Get the key first
-	pair, err := s.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
 	// Catch zk notifications and fire changes into the channel.
 	watchCh := make(chan *store.KVPair)
 	go func() {
 		defer close(watchCh)
 
-		// Get returns the current value to the channel prior
-		// to listening to any event that may occur on that key
-		watchCh <- pair
+		var fireEvt = true
 		for {
-			_, _, eventCh, err := s.client.GetW(s.normalize(key))
+			resp, meta, eventCh, err := s.getW(key)
 			if err != nil {
 				return
 			}
+			if fireEvt {
+				watchCh <- &store.KVPair{
+					Key:       key,
+					Value:     resp,
+					LastIndex: uint64(meta.Version),
+				}
+			}
 			select {
 			case e := <-eventCh:
-				if e.Type == zk.EventNodeDataChanged {
-					if entry, err := s.Get(key); err == nil {
-						watchCh <- entry
-					}
-				}
+				// Only fire an event if the data in the node changed.
+				// Simply reset the watch if this is any other event
+				// (e.g. a session event).
+				fireEvt = e.Type == zk.EventNodeDataChanged
 			case <-stopCh:
 				// There is no way to stop GetW so just quit
 				return
@@ -217,36 +196,35 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
 func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
-	// List the childrens first
-	entries, err := s.List(directory)
-	if err != nil {
-		return nil, err
-	}
-
 	// Catch zk notifications and fire changes into the channel.
 	watchCh := make(chan []*store.KVPair)
 	go func() {
 		defer close(watchCh)
 
-		// List returns the children values to the channel
-		// prior to listening to any events that may occur
-		// on those keys
-		watchCh <- entries
-
+		var fireEvt = true
 		for {
-			_, _, eventCh, err := s.client.ChildrenW(s.normalize(directory))
+		WATCH:
+			keys, _, eventCh, err := s.client.ChildrenW(s.normalize(directory))
 			if err != nil {
 				return
 			}
+			if fireEvt {
+				kvs, err := s.getKVPairs(directory, keys)
+				if err != nil {
+					// Failed to get values for one or more of the keys,
+					// the list may be out of date so try again.
+					goto WATCH
+				}
+				watchCh <- kvs
+			}
 			select {
 			case e := <-eventCh:
-				if e.Type == zk.EventNodeChildrenChanged {
-					if kv, err := s.List(directory); err == nil {
-						watchCh <- kv
-					}
-				}
+				// Only fire an event if the children have changed.
+				// Simply reset the watch if this is any other event
+				// (e.g. a session event).
+				fireEvt = e.Type == zk.EventNodeChildrenChanged
 			case <-stopCh:
-				// There is no way to stop GetW so just quit
+				// There is no way to stop ChildrenW so just quit
 				return
 			}
 		}
@@ -257,7 +235,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 
 // List child nodes of a given directory
 func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
-	keys, stat, err := s.client.Children(s.normalize(directory))
+	keys, _, err := s.client.Children(s.normalize(directory))
 	if err != nil {
 		if err == zk.ErrNoNode {
 			return nil, store.ErrKeyNotFound
@@ -265,27 +243,16 @@ func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
 		return nil, err
 	}
 
-	kv := []*store.KVPair{}
-
-	// FIXME Costly Get request for each child key..
-	for _, key := range keys {
-		pair, err := s.Get(strings.TrimSuffix(directory, "/") + s.normalize(key))
-		if err != nil {
-			// If node is not found: List is out of date, retry
-			if err == store.ErrKeyNotFound {
-				return s.List(directory)
-			}
-			return nil, err
+	kvs, err := s.getKVPairs(directory, keys)
+	if err != nil {
+		// If node is not found: List is out of date, retry
+		if err == store.ErrKeyNotFound {
+			return s.List(directory)
 		}
-
-		kv = append(kv, &store.KVPair{
-			Key:       key,
-			Value:     []byte(pair.Value),
-			LastIndex: uint64(stat.Version),
-		})
+		return nil, err
 	}
 
-	return kv, nil
+	return kvs, nil
 }
 
 // DeleteTree deletes a range of keys under a given directory
@@ -446,4 +413,88 @@ func (s *Zookeeper) Close() {
 func (s *Zookeeper) normalize(key string) string {
 	key = store.Normalize(key)
 	return strings.TrimSuffix(key, "/")
+}
+
+func (s *Zookeeper) get(key string) ([]byte, *zk.Stat, error) {
+	var resp []byte
+	var meta *zk.Stat
+	var err error
+
+	// To guard against older versions of libkv
+	// creating and writing to znodes non-atomically,
+	// We try to resync few times if we read SOH or
+	// an empty string
+	for i := 0; i <= syncRetryLimit; i++ {
+		resp, meta, err = s.client.Get(s.normalize(key))
+
+		if err != nil {
+			if err == zk.ErrNoNode {
+				return nil, nil, store.ErrKeyNotFound
+			}
+			return nil, nil, err
+		}
+
+		if string(resp) != SOH && string(resp) != "" {
+			return resp, meta, nil
+		}
+
+		if i < syncRetryLimit {
+			if _, err = s.client.Sync(s.normalize(key)); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	return resp, meta, nil
+}
+
+func (s *Zookeeper) getW(key string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
+	var resp []byte
+	var meta *zk.Stat
+	var ech <-chan zk.Event
+	var err error
+
+	// To guard against older versions of libkv
+	// creating and writing to znodes non-atomically,
+	// We try to resync few times if we read SOH or
+	// an empty string
+	for i := 0; i <= syncRetryLimit; i++ {
+		resp, meta, ech, err = s.client.GetW(s.normalize(key))
+
+		if err != nil {
+			if err == zk.ErrNoNode {
+				return nil, nil, nil, store.ErrKeyNotFound
+			}
+			return nil, nil, nil, err
+		}
+
+		if string(resp) != SOH && string(resp) != "" {
+			return resp, meta, ech, nil
+		}
+
+		if i < syncRetryLimit {
+			if _, err = s.client.Sync(s.normalize(key)); err != nil {
+				return nil, nil, nil, err
+			}
+		}
+	}
+	return resp, meta, ech, nil
+}
+
+func (s *Zookeeper) getKVPairs(directory string, keys []string) ([]*store.KVPair, error) {
+	kvs := []*store.KVPair{}
+
+	for _, key := range keys {
+		pair, err := s.Get(strings.TrimSuffix(directory, "/") + s.normalize(key))
+		if err != nil {
+			return nil, err
+		}
+
+		kvs = append(kvs, &store.KVPair{
+			Key:       key,
+			Value:     pair.Value,
+			LastIndex: pair.LastIndex,
+		})
+	}
+
+	return kvs, nil
 }
