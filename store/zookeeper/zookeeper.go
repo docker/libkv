@@ -154,17 +154,19 @@ func (s *Zookeeper) Exists(key string) (bool, error) {
 // on errors. Upon creation, the current value will first
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, <-chan error) {
 	// Get the key first
 	pair, err := s.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, store.ErrorChannelWith(err)
 	}
 
 	// Catch zk notifications and fire changes into the channel.
 	watchCh := make(chan *store.KVPair)
+	errorCh := make(chan error)
 	go func() {
 		defer close(watchCh)
+		defer close(errorCh)
 
 		// Get returns the current value to the channel prior
 		// to listening to any event that may occur on that key
@@ -172,8 +174,10 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 		for {
 			_, _, eventCh, err := s.client.GetW(s.normalize(key))
 			if err != nil {
+				errorCh <- err
 				return
 			}
+
 			select {
 			case e := <-eventCh:
 				if e.Type == zk.EventNodeDataChanged {
@@ -188,7 +192,7 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // WatchTree watches for changes on a "directory"
@@ -196,17 +200,19 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 // on errors. Upon creating a watch, the current childs values
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, <-chan error) {
 	// List the childrens first
 	entries, err := s.List(directory)
 	if err != nil {
-		return nil, err
+		return nil, store.ErrorChannelWith(err)
 	}
 
 	// Catch zk notifications and fire changes into the channel.
 	watchCh := make(chan []*store.KVPair)
+	errorCh := make(chan error)
 	go func() {
 		defer close(watchCh)
+		defer close(errorCh)
 
 		// List returns the children values to the channel
 		// prior to listening to any events that may occur
@@ -216,6 +222,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 		for {
 			_, _, eventCh, err := s.client.ChildrenW(s.normalize(directory))
 			if err != nil {
+				errorCh <- err
 				return
 			}
 			select {
@@ -232,7 +239,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // List child nodes of a given directory
