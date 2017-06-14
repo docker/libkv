@@ -168,7 +168,7 @@ func (s *Consul) getActiveSession(key string) (string, error) {
 
 // Get the value at "key", returns the last modified index
 // to use in conjunction to CAS calls
-func (s *Consul) Get(key string) (*store.KVPair, error) {
+func (s *Consul) Get(key string, opts *store.ReadOptions) (*store.KVPair, error) {
 	options := &api.QueryOptions{
 		AllowStale:        false,
 		RequireConsistent: true,
@@ -217,7 +217,7 @@ func (s *Consul) Put(key string, value []byte, opts *store.WriteOptions) error {
 
 // Delete a value at "key"
 func (s *Consul) Delete(key string) error {
-	if _, err := s.Get(key); err != nil {
+	if _, err := s.Get(key, nil); err != nil {
 		return err
 	}
 	_, err := s.client.KV().Delete(s.normalize(key), nil)
@@ -225,8 +225,8 @@ func (s *Consul) Delete(key string) error {
 }
 
 // Exists checks that the key exists inside the store
-func (s *Consul) Exists(key string) (bool, error) {
-	_, err := s.Get(key)
+func (s *Consul) Exists(key string, opts *store.ReadOptions) (bool, error) {
+	_, err := s.Get(key, opts)
 	if err != nil {
 		if err == store.ErrKeyNotFound {
 			return false, nil
@@ -237,7 +237,7 @@ func (s *Consul) Exists(key string) (bool, error) {
 }
 
 // List child nodes of a given directory
-func (s *Consul) List(directory string) ([]*store.KVPair, error) {
+func (s *Consul) List(directory string, opts *store.ReadOptions) ([]*store.KVPair, error) {
 	pairs, _, err := s.client.KV().List(s.normalize(directory), nil)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (s *Consul) List(directory string) ([]*store.KVPair, error) {
 
 // DeleteTree deletes a range of keys under a given directory
 func (s *Consul) DeleteTree(directory string) error {
-	if _, err := s.List(directory); err != nil {
+	if _, err := s.List(directory, nil); err != nil {
 		return err
 	}
 	_, err := s.client.KV().DeleteTree(s.normalize(directory), nil)
@@ -276,7 +276,7 @@ func (s *Consul) DeleteTree(directory string) error {
 // on errors. Upon creation, the current value will first
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Consul) Watch(key string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan *store.KVPair, error) {
 	kv := s.client.KV()
 	watchCh := make(chan *store.KVPair)
 
@@ -328,7 +328,7 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 // on errors. Upon creating a watch, the current childs values
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan []*store.KVPair, error) {
 	kv := s.client.KV()
 	watchCh := make(chan []*store.KVPair)
 
@@ -520,7 +520,7 @@ func (s *Consul) AtomicPut(key string, value []byte, previous *store.KVPair, opt
 		return false, nil, store.ErrKeyModified
 	}
 
-	pair, err := s.Get(key)
+	pair, err := s.Get(key, nil)
 	if err != nil {
 		return false, nil, err
 	}
@@ -538,7 +538,7 @@ func (s *Consul) AtomicDelete(key string, previous *store.KVPair) (bool, error) 
 	p := &api.KVPair{Key: s.normalize(key), ModifyIndex: previous.LastIndex, Flags: api.LockFlagValue}
 
 	// Extra Get operation to check on the key
-	_, err := s.Get(key)
+	_, err := s.Get(key, nil)
 	if err != nil && err == store.ErrKeyNotFound {
 		return false, err
 	}

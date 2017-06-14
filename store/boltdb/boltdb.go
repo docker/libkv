@@ -127,7 +127,7 @@ func (b *BoltDB) releaseDBhandle() {
 
 // Get the value at "key". BoltDB doesn't provide an inbuilt last modified index with every kv pair. Its implemented by
 // by a atomic counter maintained by the libkv and appened to the value passed by the client.
-func (b *BoltDB) Get(key string) (*store.KVPair, error) {
+func (b *BoltDB) Get(key string, opts *store.ReadOptions) (*store.KVPair, error) {
 	var (
 		val []byte
 		db  *bolt.DB
@@ -229,7 +229,7 @@ func (b *BoltDB) Delete(key string) error {
 }
 
 // Exists checks if the key exists inside the store
-func (b *BoltDB) Exists(key string) (bool, error) {
+func (b *BoltDB) Exists(key string, opts *store.ReadOptions) (bool, error) {
 	var (
 		val []byte
 		db  *bolt.DB
@@ -261,7 +261,7 @@ func (b *BoltDB) Exists(key string) (bool, error) {
 }
 
 // List returns the range of keys starting with the passed in prefix
-func (b *BoltDB) List(keyPrefix string) ([]*store.KVPair, error) {
+func (b *BoltDB) List(keyPrefix string, opts *store.ReadOptions) ([]*store.KVPair, error) {
 	var (
 		db  *bolt.DB
 		err error
@@ -464,11 +464,11 @@ func (b *BoltDB) NewLock(key string, options *store.LockOptions) (store.Locker, 
 }
 
 // Watch has to implemented at the library level since its not supported by BoltDB
-func (b *BoltDB) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (b *BoltDB) Watch(key string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan *store.KVPair, error) {
 	return nil, store.ErrCallNotSupported
 }
 
 // WatchTree has to implemented at the library level since its not supported by BoltDB
-func (b *BoltDB) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (b *BoltDB) WatchTree(directory string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan []*store.KVPair, error) {
 	return nil, store.ErrCallNotSupported
 }
