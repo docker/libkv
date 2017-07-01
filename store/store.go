@@ -67,20 +67,20 @@ type Store interface {
 	Put(key string, value []byte, options *WriteOptions) error
 
 	// Get a value given its key
-	Get(key string) (*KVPair, error)
+	Get(key string, options *ReadOptions) (*KVPair, error)
 
 	// Delete the value at the specified key
 	Delete(key string) error
 
 	// Verify if a Key exists in the store
-	Exists(key string) (bool, error)
+	Exists(key string, options *ReadOptions) (bool, error)
 
 	// Watch for changes on a key
-	Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, error)
+	Watch(key string, stopCh <-chan struct{}, options *ReadOptions) (<-chan *KVPair, error)
 
 	// WatchTree watches for changes on child nodes under
 	// a given directory
-	WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*KVPair, error)
+	WatchTree(directory string, stopCh <-chan struct{}, options *ReadOptions) (<-chan []*KVPair, error)
 
 	// NewLock creates a lock for a given key.
 	// The returned Locker is not held and must be acquired
@@ -88,7 +88,7 @@ type Store interface {
 	NewLock(key string, options *LockOptions) (Locker, error)
 
 	// List the content of a given prefix
-	List(directory string) ([]*KVPair, error)
+	List(directory string, options *ReadOptions) ([]*KVPair, error)
 
 	// DeleteTree deletes a range of keys under a given directory
 	DeleteTree(directory string) error
@@ -115,6 +115,11 @@ type KVPair struct {
 type WriteOptions struct {
 	IsDir bool
 	TTL   time.Duration
+}
+
+// ReadOptions contains optional request parameters
+type ReadOptions struct {
+	Quorum bool
 }
 
 // LockOptions contains optional request parameters

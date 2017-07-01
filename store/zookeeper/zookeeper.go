@@ -65,7 +65,7 @@ func (s *Zookeeper) setTimeout(time time.Duration) {
 
 // Get the value at "key", returns the last modified index
 // to use in conjunction to Atomic calls
-func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
+func (s *Zookeeper) Get(key string, opts *store.ReadOptions) (pair *store.KVPair, err error) {
 	resp, meta, err := s.client.Get(s.normalize(key))
 
 	if err != nil {
@@ -78,7 +78,7 @@ func (s *Zookeeper) Get(key string) (pair *store.KVPair, err error) {
 	// FIXME handle very rare cases where Get returns the
 	// SOH control character instead of the actual value
 	if string(resp) == SOH {
-		return s.Get(store.Normalize(key))
+		return s.Get(store.Normalize(key), opts)
 	}
 
 	pair = &store.KVPair{
@@ -114,7 +114,7 @@ func (s *Zookeeper) createFullPath(path []string, ephemeral bool) error {
 func (s *Zookeeper) Put(key string, value []byte, opts *store.WriteOptions) error {
 	fkey := s.normalize(key)
 
-	exists, err := s.Exists(key)
+	exists, err := s.Exists(key, nil)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (s *Zookeeper) Delete(key string) error {
 }
 
 // Exists checks if the key exists inside the store
-func (s *Zookeeper) Exists(key string) (bool, error) {
+func (s *Zookeeper) Exists(key string, opts *store.ReadOptions) (bool, error) {
 	exists, _, err := s.client.Exists(s.normalize(key))
 	if err != nil {
 		return false, err
@@ -154,9 +154,9 @@ func (s *Zookeeper) Exists(key string) (bool, error) {
 // on errors. Upon creation, the current value will first
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan *store.KVPair, error) {
 	// Get the key first
-	pair, err := s.Get(key)
+	pair, err := s.Get(key, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 			select {
 			case e := <-eventCh:
 				if e.Type == zk.EventNodeDataChanged {
-					if entry, err := s.Get(key); err == nil {
+					if entry, err := s.Get(key, opts); err == nil {
 						watchCh <- entry
 					}
 				}
@@ -196,9 +196,9 @@ func (s *Zookeeper) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVP
 // on errors. Upon creating a watch, the current childs values
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan []*store.KVPair, error) {
 	// List the childrens first
-	entries, err := s.List(directory)
+	entries, err := s.List(directory, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 			select {
 			case e := <-eventCh:
 				if e.Type == zk.EventNodeChildrenChanged {
-					if kv, err := s.List(directory); err == nil {
+					if kv, err := s.List(directory, opts); err == nil {
 						watchCh <- kv
 					}
 				}
@@ -236,7 +236,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 }
 
 // List child nodes of a given directory
-func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
+func (s *Zookeeper) List(directory string, opts *store.ReadOptions) ([]*store.KVPair, error) {
 	keys, stat, err := s.client.Children(s.normalize(directory))
 	if err != nil {
 		if err == zk.ErrNoNode {
@@ -249,11 +249,11 @@ func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
 
 	// FIXME Costly Get request for each child key..
 	for _, key := range keys {
-		pair, err := s.Get(strings.TrimSuffix(directory, "/") + s.normalize(key))
+		pair, err := s.Get(strings.TrimSuffix(directory, "/")+s.normalize(key), opts)
 		if err != nil {
 			// If node is not found: List is out of date, retry
 			if err == store.ErrKeyNotFound {
-				return s.List(directory)
+				return s.List(directory, opts)
 			}
 			return nil, err
 		}
@@ -270,7 +270,7 @@ func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
 
 // DeleteTree deletes a range of keys under a given directory
 func (s *Zookeeper) DeleteTree(directory string) error {
-	pairs, err := s.List(directory)
+	pairs, err := s.List(directory, nil)
 	if err != nil {
 		return err
 	}

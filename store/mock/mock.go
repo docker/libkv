@@ -31,8 +31,8 @@ func (s *Mock) Put(key string, value []byte, opts *store.WriteOptions) error {
 }
 
 // Get mock
-func (s *Mock) Get(key string) (*store.KVPair, error) {
-	args := s.Mock.Called(key)
+func (s *Mock) Get(key string, opts *store.ReadOptions) (*store.KVPair, error) {
+	args := s.Mock.Called(key, opts)
 	return args.Get(0).(*store.KVPair), args.Error(1)
 }
 
@@ -43,20 +43,20 @@ func (s *Mock) Delete(key string) error {
 }
 
 // Exists mock
-func (s *Mock) Exists(key string) (bool, error) {
+func (s *Mock) Exists(key string, opts *store.ReadOptions) (bool, error) {
 	args := s.Mock.Called(key)
 	return args.Bool(0), args.Error(1)
 }
 
 // Watch mock
-func (s *Mock) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
-	args := s.Mock.Called(key, stopCh)
+func (s *Mock) Watch(key string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan *store.KVPair, error) {
+	args := s.Mock.Called(key, stopCh, opts)
 	return args.Get(0).(<-chan *store.KVPair), args.Error(1)
 }
 
 // WatchTree mock
-func (s *Mock) WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
-	args := s.Mock.Called(prefix, stopCh)
+func (s *Mock) WatchTree(prefix string, stopCh <-chan struct{}, opts *store.ReadOptions) (<-chan []*store.KVPair, error) {
+	args := s.Mock.Called(prefix, stopCh, opts)
 	return args.Get(0).(chan []*store.KVPair), args.Error(1)
 }
 
@@ -67,8 +67,8 @@ func (s *Mock) NewLock(key string, options *store.LockOptions) (store.Locker, er
 }
 
 // List mock
-func (s *Mock) List(prefix string) ([]*store.KVPair, error) {
-	args := s.Mock.Called(prefix)
+func (s *Mock) List(prefix string, opts *store.ReadOptions) ([]*store.KVPair, error) {
+	args := s.Mock.Called(prefix, opts)
 	return args.Get(0).([]*store.KVPair), args.Error(1)
 }
 
