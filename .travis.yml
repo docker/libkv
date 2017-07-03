@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.7.1
+  - 1.8.3
 
 # let us have speedy Docker-based Travis workers
 sudo: false
@@ -15,8 +15,8 @@ before_install:
   - go get github.com/GeertJohan/fgt
 
 before_script:
-  - script/travis_consul.sh 0.6.3
-  - script/travis_etcd.sh 3.0.0
+  - script/travis_consul.sh 0.8.5
+  - script/travis_etcd.sh 3.2.1
   - script/travis_zk.sh 3.5.1-alpha
 
 script:
