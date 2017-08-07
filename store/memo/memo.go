@@ -55,6 +55,9 @@ func (s *Memo) Put(key string, value []byte, options *store.WriteOptions) error 
 // Delete value at "key"
 func (s *Memo) Delete(key string) error {
 	_, err := s.kvs.Delete(context.Background(), &kvs.DeleteRequest{Key: key})
+	if err != nil && grpc.Code(err) == codes.NotFound {
+		return store.ErrKeyNotFound
+	}
 	return err
 }
 
@@ -99,6 +102,9 @@ func (s *Memo) List(directory string) ([]*store.KVPair, error) {
 			return nil, err
 		}
 		res = append(res, kv)
+	}
+	if len(res) == 0 {
+		return nil, store.ErrKeyNotFound
 	}
 	return res, nil
 }
