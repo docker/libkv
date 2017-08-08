@@ -29,3 +29,5 @@ script:
   - go test -v -race ./...
   - script/coverage
   - goveralls -service=travis-ci -coverprofile=goverage.report
+
+dist: trusty
