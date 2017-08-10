@@ -22,7 +22,7 @@ before_script:
 script:
   - ./consul agent -server -bootstrap -advertise=127.0.0.1 -data-dir /tmp/consul -config-file=./config.json 1>/dev/null &
   - ./etcd/etcd --listen-client-urls 'http://0.0.0.0:4001' --advertise-client-urls 'http://127.0.0.1:4001' >/dev/null 2>&1 &
-  - ./zk/bin/zkServer.sh start ./zk/conf/zoo.cfg 1> /dev/null
+  - ./script/travis_start_zk.sh
   - script/validate-gofmt
   - go vet ./...
   - fgt golint ./...
