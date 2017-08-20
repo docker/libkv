@@ -44,7 +44,7 @@ local del = function(key)
     return redis.call('del', key)
 end
 
--- cas is compare-and-swap function which compare the old value's singature
+-- cas is compare-and-swap function which compare the old value's signature
 -- if they are the same, then swap with new val
 -- noted that $old and $new are json formatted strings
 -- and key is keyed with 'lastIndex'
@@ -63,7 +63,7 @@ local cas = function(key, old, new, ttl)
     end
 end
 
--- cad is compare-and-del function which compare the old value's singature
+-- cad is compare-and-del function which compare the old value's signature
 -- if they are the same, then the key will be deleted
 -- noted that $old is a json formatted string
 -- and key is keyed with 'lastIndex'
