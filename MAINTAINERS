@@ -12,6 +12,7 @@
 	[Org."Core maintainers"]
 		people = [
 			"aluzzardi",
+			"dimrok",
 			"sanimej",
 			"vieux",
 		]
@@ -23,6 +24,11 @@
 # in the people section.
 
 	# ADD YOURSELF HERE IN ALPHABETICAL ORDER
+
+	[people.dimrok]
+	Name = "Antony Méchin"
+	Email = "antony.mechin@docker.com"
+	GitHub = "dimrok"
 
 	[people.aluzzardi]
 	Name = "Andrea Luzzardi"
