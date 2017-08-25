@@ -18,6 +18,8 @@ const (
 	ZK Backend = "zk"
 	// BOLTDB backend
 	BOLTDB Backend = "boltdb"
+	// MYSQL backend
+	MYSQL Backend = "mysql"
 )
 
 var (
@@ -48,6 +50,8 @@ type Config struct {
 	PersistConnection bool
 	Username          string
 	Password          string
+	Database          string
+	Table             string
 }
 
 // ClientTLSConfig contains data for a Client TLS configuration in the form

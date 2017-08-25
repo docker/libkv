@@ -13,7 +13,7 @@ For example, you can use it to store your metadata or for service discovery to r
 
 You can also easily implement a generic *Leader Election* on top of it (see the [docker/leadership](https://github.com/docker/leadership) repository).
 
-As of now, `libkv` offers support for `Consul`, `Etcd`, `Zookeeper` (**Distributed** store) and `BoltDB` (**Local** store).
+As of now, `libkv` offers support for `Consul`, `Etcd`, `Zookeeper` (**Distributed** store), `MySQL` and `BoltDB` (**Local** store).
 
 ## Usage
 
@@ -34,6 +34,7 @@ You can find examples of usage for `libkv` under in `docs/examples.go`. Optional
 - Etcd versions >= `2.0` because it uses the new `coreos/etcd/client`, this might change in the future as the support for `APIv3` comes along and adds more capabilities.
 - Zookeeper versions >= `3.4.5`. Although this might work with previous version but this remains untested as of now.
 - Boltdb, which shouldn't be subject to any version dependencies.
+- MySQL versions >= `5.1.73`.
 
 ## Interface
 
@@ -62,19 +63,19 @@ Backend drivers in `libkv` are generally divided between **local drivers** and *
 
 Local drivers are usually used in complement to the distributed drivers to store informations that only needs to be available locally.
 
-| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  |
-|-----------------------|:----------:|:------:|:-----------:|:--------:|
-| Put                   |     X      |   X    |      X      |    X     |
-| Get                   |     X      |   X    |      X      |    X     |
-| Delete                |     X      |   X    |      X      |    X     |
-| Exists                |     X      |   X    |      X      |    X     |
-| Watch                 |     X      |   X    |      X      |          |
-| WatchTree             |     X      |   X    |      X      |          |
-| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |
-| List                  |     X      |   X    |      X      |    X     |
-| DeleteTree            |     X      |   X    |      X      |    X     |
-| AtomicPut             |     X      |   X    |      X      |    X     |
-| Close                 |     X      |   X    |      X      |    X     |
+| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  |  MySQL  |
+|-----------------------|:----------:|:------:|:-----------:|:--------:|:-------:|
+| Put                   |     X      |   X    |      X      |    X     |    X    |
+| Get                   |     X      |   X    |      X      |    X     |    X    |
+| Delete                |     X      |   X    |      X      |    X     |    X    |
+| Exists                |     X      |   X    |      X      |    X     |    X    |
+| Watch                 |     X      |   X    |      X      |          |    X    |
+| WatchTree             |     X      |   X    |      X      |          |    X    |
+| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |    X    |
+| List                  |     X      |   X    |      X      |    X     |    X    |
+| DeleteTree            |     X      |   X    |      X      |    X     |    X    |
+| AtomicPut             |     X      |   X    |      X      |    X     |    X    |
+| Close                 |     X      |   X    |      X      |    X     |    X    |
 
 ## Limitations
 
