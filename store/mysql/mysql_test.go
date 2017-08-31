@@ -80,4 +80,116 @@ func TestMySQLStoreExtra(t *testing.T) {
 	ok, err := kv.AtomicDelete("a/b/c", nil)
 	assert.Equal(t, store.ErrPreviousNotSpecified, err)
 	assert.False(t, ok)
+
+	testWatchNonExistKey(t, kv)
+	testWatchTreeNonExistKey(t, kv)
+}
+
+func testWatchNonExistKey(t *testing.T, kv store.Store) {
+	nonexist := "test/watch/nonexist"
+	value0 := []byte("hello world")
+	value1 := []byte("hello world!!!")
+	stopCh := make(chan struct{})
+
+	watchCh, err := kv.Watch(nonexist, stopCh)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go func() {
+		for i := 0; i < 3; i++ {
+			var err error
+			time.Sleep(250 * time.Millisecond)
+			switch i {
+			case 0:
+				err = kv.Put(nonexist, value0, nil)
+			case 1:
+				err = kv.Put(nonexist, value1, nil)
+			case 2:
+				err = kv.Delete(nonexist)
+			}
+			assert.NoError(t, err)
+		}
+	}()
+
+	eventCount := 0
+	for {
+		select {
+		case pair := <-watchCh:
+			switch eventCount {
+			case 0:
+				assert.Nil(t, pair, "first must be nil, because of we watching a non-exit key")
+			case 1:
+				if assert.NotNil(t, pair) {
+					assert.Equal(t, value0, pair.Value)
+				}
+			case 2:
+				if assert.NotNil(t, pair) {
+					assert.Equal(t, value1, pair.Value)
+				}
+			case 3:
+				assert.Nil(t, pair, "last must be nil, because of the key has been deleted")
+				close(stopCh)
+				return
+			}
+			eventCount++
+		case <-time.After(4 * time.Second):
+			t.Fatal("Timeout reached")
+		}
+	}
+}
+
+func testWatchTreeNonExistKey(t *testing.T, kv store.Store) {
+	nonexist := "test/watchtree/nonexist"
+	key := "test/watchtree/nonexist/testkey"
+	value0 := []byte("hello world")
+	value1 := []byte("hello world!!!")
+	stopCh := make(chan struct{})
+
+	watchCh, err := kv.WatchTree(nonexist, stopCh)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go func() {
+		for i := 0; i < 3; i++ {
+			var err error
+			time.Sleep(250 * time.Millisecond)
+			switch i {
+			case 0:
+				err = kv.Put(key, value0, nil)
+			case 1:
+				err = kv.Put(key, value1, nil)
+			case 2:
+				err = kv.Delete(key)
+			}
+			assert.NoError(t, err)
+		}
+	}()
+
+	eventCount := 0
+	for {
+		select {
+		case pairs := <-watchCh:
+			switch eventCount {
+			case 0:
+				assert.Nil(t, pairs, "first must be nil, because of we watching a non-exit key")
+			case 1:
+				if assert.NotNil(t, pairs) {
+					assert.Equal(t, value0, pairs[0].Value)
+				}
+			case 2:
+				if assert.NotNil(t, pairs) {
+					assert.Equal(t, value1, pairs[0].Value)
+				}
+			case 3:
+				assert.Nil(t, pairs, "last must be nil, because of the key has been deleted")
+				close(stopCh)
+				return
+			}
+			eventCount++
+		case <-time.After(4 * time.Second):
+			t.Fatal("Timeout reached")
+		}
+	}
 }

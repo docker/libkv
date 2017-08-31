@@ -337,12 +337,15 @@ func (m *MySQL) DeleteTree(directory string) error {
 func (m *MySQL) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
 	// Get the key first, and check the key is exist.
 	pair, err := m.Get(key)
-	if err != nil {
+	if err != nil && err != store.ErrKeyNotFound {
 		return nil, err
 	}
 
 	watchCh := make(chan *store.KVPair, 1)
-	lastIndex := pair.LastIndex
+	lastIndex := uint64(0)
+	if pair != nil {
+		lastIndex = pair.LastIndex
+	}
 	watchCh <- pair
 
 	go func() {
@@ -364,24 +367,24 @@ func (m *MySQL) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair,
 			if err != nil && err != store.ErrKeyNotFound {
 				// keep the same behavior with other backend implementant.
 				return
-			} else if err == nil {
-				// If LastIndex didn't change then it means `Get` returned
-				// because of the WaitTime and the key didn't changed.
-				if lastIndex == pair.LastIndex {
-					continue
-				}
-				lastIndex = pair.LastIndex
-				select {
-				case watchCh <- pair:
-				case <-stopCh:
-					return
-				}
 			}
-			//			else {
-			//				// the key has been deleted.
-			//				// Nothing to do with this, keep the
-			//				// same behaivor with other backend.
-			//			}
+
+			index := uint64(0)
+			if pair != nil {
+				index = pair.LastIndex
+			}
+
+			// If index didn't change then it means `Get` returned
+			// because of the WaitTime and the key didn't changed.
+			if lastIndex == index {
+				continue
+			}
+			lastIndex = index
+			select {
+			case watchCh <- pair:
+			case <-stopCh:
+				return
+			}
 		}
 	}()
 
@@ -396,7 +399,7 @@ func (m *MySQL) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair,
 func (m *MySQL) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
 	directory = normalize(directory)
 	list, err := m.List(directory)
-	if err != nil {
+	if err != nil && err != store.ErrKeyNotFound {
 		return nil, err
 	}
 
@@ -426,7 +429,7 @@ func (m *MySQL) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*s
 
 			// Get all the childrens
 			list, err := m.List(directory)
-			if err != nil {
+			if err != nil && err != store.ErrKeyNotFound {
 				return
 			}
 
