@@ -485,12 +485,11 @@ func (l *etcdLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
 		setOpts.PrevExist = etcd.PrevNoExist
 		resp, err := l.client.Set(context.Background(), l.key, l.value, setOpts)
 		if err != nil {
-			if etcdError, ok := err.(etcd.Error); ok {
-				if etcdError.Code != etcd.ErrorCodeNodeExist {
-					return nil, err
-				}
-				setOpts.PrevIndex = ^uint64(0)
+			etcdError, ok := err.(etcd.Error)
+			if !ok || etcdError.Code != etcd.ErrorCodeNodeExist {
+				return nil, err
 			}
+			setOpts.PrevIndex = ^uint64(0)
 		} else {
 			setOpts.PrevIndex = resp.Node.ModifiedIndex
 		}
@@ -505,10 +504,9 @@ func (l *etcdLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
 			break
 		} else {
 			// If this is a legitimate error, return
-			if etcdError, ok := err.(etcd.Error); ok {
-				if etcdError.Code != etcd.ErrorCodeTestFailed {
-					return nil, err
-				}
+			etcdError, ok := err.(etcd.Error)
+			if !ok || etcdError.Code != etcd.ErrorCodeNodeExist {
+				return nil, err
 			}
 
 			// Seeker section
