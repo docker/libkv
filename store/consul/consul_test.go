@@ -47,13 +47,15 @@ func TestConsulStore(t *testing.T) {
 	lockKV := makeConsulClient(t)
 	ttlKV := makeConsulClient(t)
 
+	defer testutils.RunCleanup(t, kv)
+
 	testutils.RunTestCommon(t, kv)
 	testutils.RunTestAtomic(t, kv)
 	testutils.RunTestWatch(t, kv)
 	testutils.RunTestLock(t, kv)
 	testutils.RunTestLockTTL(t, kv, lockKV)
+	testutils.RunTestLockWait(t, kv, lockKV)
 	testutils.RunTestTTL(t, kv, ttlKV)
-	testutils.RunCleanup(t, kv)
 }
 
 func TestGetActiveSession(t *testing.T) {
