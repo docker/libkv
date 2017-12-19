@@ -45,10 +45,11 @@ func TestZkStore(t *testing.T) {
 	kv := makeZkClient(t)
 	ttlKV := makeZkClient(t)
 
+	defer testutils.RunCleanup(t, kv)
+
 	testutils.RunTestCommon(t, kv)
 	testutils.RunTestAtomic(t, kv)
 	testutils.RunTestWatch(t, kv)
 	testutils.RunTestLock(t, kv)
 	testutils.RunTestTTL(t, kv, ttlKV)
-	testutils.RunCleanup(t, kv)
 }

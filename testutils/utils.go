@@ -12,42 +12,78 @@ import (
 // RunTestCommon tests the minimal required APIs which
 // should be supported by all K/V backends
 func RunTestCommon(t *testing.T, kv store.Store) {
-	testPutGetDeleteExists(t, kv)
-	testList(t, kv)
-	testDeleteTree(t, kv)
+	t.Run("Common", func(t *testing.T) {
+		t.Run("PutGetDeleteExists", func(t *testing.T) {
+			testPutGetDeleteExists(t, kv)
+		})
+		t.Run("List", func(t *testing.T) {
+			testList(t, kv)
+		})
+		t.Run("DeleteTree", func(t *testing.T) {
+			testDeleteTree(t, kv)
+		})
+	})
 }
 
 // RunTestAtomic tests the Atomic operations by the K/V
 // backends
 func RunTestAtomic(t *testing.T, kv store.Store) {
-	testAtomicPut(t, kv)
-	testAtomicPutCreate(t, kv)
-	testAtomicPutWithSlashSuffixKey(t, kv)
-	testAtomicDelete(t, kv)
+	t.Run("Atomic", func(t *testing.T) {
+		t.Run("Put", func(t *testing.T) {
+			testAtomicPut(t, kv)
+		})
+		t.Run("PutCreate", func(t *testing.T) {
+			testAtomicPutCreate(t, kv)
+		})
+		t.Run("PutWithSlashSuffixKey", func(t *testing.T) {
+			testAtomicPutWithSlashSuffixKey(t, kv)
+		})
+		t.Run("Delete", func(t *testing.T) {
+			testAtomicDelete(t, kv)
+		})
+	})
 }
 
 // RunTestWatch tests the watch/monitor APIs supported
 // by the K/V backends.
 func RunTestWatch(t *testing.T, kv store.Store) {
-	testWatch(t, kv)
-	testWatchTree(t, kv)
+	t.Run("Watch", func(t *testing.T) {
+		testWatch(t, kv)
+	})
+	t.Run("WatchTree", func(t *testing.T) {
+		testWatchTree(t, kv)
+	})
 }
 
 // RunTestLock tests the KV pair Lock/Unlock APIs supported
 // by the K/V backends.
 func RunTestLock(t *testing.T, kv store.Store) {
-	testLockUnlock(t, kv)
+	t.Run("Lock", func(t *testing.T) {
+		testLockUnlock(t, kv)
+	})
 }
 
 // RunTestLockTTL tests the KV pair Lock with TTL APIs supported
 // by the K/V backends.
 func RunTestLockTTL(t *testing.T, kv store.Store, backup store.Store) {
-	testLockTTL(t, kv, backup)
+	t.Run("LockTTL", func(t *testing.T) {
+		testLockTTL(t, kv, backup)
+	})
+}
+
+// RunTestLockWait tests that clients correctly wait for a lock to be
+// available.
+func RunTestLockWait(t *testing.T, kv store.Store, backup store.Store) {
+	t.Run("LockWait", func(t *testing.T) {
+		testLockWait(t, kv, backup)
+	})
 }
 
 // RunTestTTL tests the TTL functionality of the K/V backend.
 func RunTestTTL(t *testing.T, kv store.Store, backup store.Store) {
-	testPutTTL(t, kv, backup)
+	t.Run("PutTTL", func(t *testing.T) {
+		testPutTTL(t, kv, backup)
+	})
 }
 
 func testPutGetDeleteExists(t *testing.T, kv store.Store) {
@@ -465,6 +501,62 @@ func testLockTTL(t *testing.T, kv store.Store, otherConn store.Store) {
 	assert.NoError(t, err)
 }
 
+// testLockWait ensures that a client waiting to acquire a lock does indeed
+// acquire the lock once another client has released it.
+func testLockWait(t *testing.T, kv, otherConn store.Store) {
+	key := "testLockWait"
+
+	// We should be able to create a new lock on key.
+	lock1, err := kv.NewLock(key, &store.LockOptions{
+		TTL: 2 * time.Second,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, lock1)
+
+	// Lock should successfully succeed.
+	lock1Chan, err := lock1.Lock(nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, lock1Chan)
+
+	// The other client should block on acquiring the lock until the first
+	// client unlocks.
+	lock2, err := kv.NewLock(key, &store.LockOptions{
+		TTL: 2 * time.Second,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, lock2)
+
+	gotLock2 := make(chan struct{})
+	go func(done chan struct{}) {
+		lock2Chan, err := lock2.Lock(nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, lock2Chan)
+		close(done)
+	}(gotLock2)
+
+	// The other client should now be blocking. Ensure that it doesn't get the
+	// lock for 5 seconds.
+	select {
+	case <-gotLock2:
+		t.FailNow() // The other client should not have the lock.
+	case <-time.After(5 * time.Second):
+		// Success! The other client is still waiting.
+	}
+
+	// Now unlock the from the first client.
+	assert.NoError(t, lock1.Unlock())
+
+	// The other client should no longer be blocking as the lock has been
+	// released by the first client.
+	select {
+	case <-gotLock2:
+		// Success! The other client has acquired the lock.
+	case <-time.After(5 * time.Second):
+		t.FailNow() // The other client should no longer be blocking.
+	}
+	assert.NoError(t, lock2.Unlock())
+}
+
 func testPutTTL(t *testing.T, kv store.Store, otherConn store.Store) {
 	firstKey := "testPutTTL"
 	firstValue := []byte("foo")
@@ -610,6 +702,7 @@ func RunCleanup(t *testing.T, kv store.Store) {
 		"testAtomicDelete",
 		"testLockUnlock",
 		"testLockTTL",
+		"testLockWait",
 		"testPutTTL",
 		"testList",
 		"testDeleteTree",
