@@ -106,7 +106,7 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 	go func() {
 		for {
 			// AutoSync should never be broken.
-			// if so when one etcd cluster node change advise ip then docker client will never known.
+			// if so when one etcd cluster node change endpoint ip address then docker client will never known.
 			if err := c.AutoSync(context.Background(), periodicSync); err != nil {
 				log.Printf("Failed to AutoSync from etcd,Because of %s\n", err.Error())
 				time.Sleep(periodicSyncDelay)
