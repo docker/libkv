@@ -34,6 +34,7 @@ You can find examples of usage for `libkv` under in `docs/examples.go`. Optional
 - Etcd versions >= `2.0` because it uses the new `coreos/etcd/client`, this might change in the future as the support for `APIv3` comes along and adds more capabilities.
 - Zookeeper versions >= `3.4.5`. Although this might work with previous version but this remains untested as of now.
 - Boltdb, which shouldn't be subject to any version dependencies.
+- Memo version >= 0.9.2.
 
 ## Interface
 
@@ -62,19 +63,19 @@ Backend drivers in `libkv` are generally divided between **local drivers** and *
 
 Local drivers are usually used in complement to the distributed drivers to store informations that only needs to be available locally.
 
-| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  |
-|-----------------------|:----------:|:------:|:-----------:|:--------:|
-| Put                   |     X      |   X    |      X      |    X     |
-| Get                   |     X      |   X    |      X      |    X     |
-| Delete                |     X      |   X    |      X      |    X     |
-| Exists                |     X      |   X    |      X      |    X     |
-| Watch                 |     X      |   X    |      X      |          |
-| WatchTree             |     X      |   X    |      X      |          |
-| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |
-| List                  |     X      |   X    |      X      |    X     |
-| DeleteTree            |     X      |   X    |      X      |    X     |
-| AtomicPut             |     X      |   X    |      X      |    X     |
-| Close                 |     X      |   X    |      X      |    X     |
+| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  |  Memo  |
+|-----------------------|:----------:|:------:|:-----------:|:--------:|:------:|
+| Put                   |     X      |   X    |      X      |    X     |    X   |
+| Get                   |     X      |   X    |      X      |    X     |    X   |
+| Delete                |     X      |   X    |      X      |    X     |    X   |
+| Exists                |     X      |   X    |      X      |    X     |    X   |
+| Watch                 |     X      |   X    |      X      |          |        |
+| WatchTree             |     X      |   X    |      X      |          |        |
+| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |        |
+| List                  |     X      |   X    |      X      |    X     |    X   |
+| DeleteTree            |     X      |   X    |      X      |    X     |    X   |
+| AtomicPut             |     X      |   X    |      X      |    X     |        |
+| Close                 |     X      |   X    |      X      |    X     |    X   |
 
 ## Limitations
 
@@ -104,4 +105,4 @@ Want to hack on libkv? [Docker's contributions guidelines](https://github.com/do
 
 ## Copyright and license
 
-Copyright © 2014-2016 Docker, Inc. All rights reserved, except as follows. Code is released under the Apache 2.0 license. The README.md file, and files in the "docs" folder are licensed under the Creative Commons Attribution 4.0 International License under the terms and conditions set forth in the file "LICENSE.docs". You may obtain a duplicate copy of the same license, titled CC-BY-SA-4.0, at http://creativecommons.org/licenses/by/4.0/.
+Copyright © 2014-2017 Docker, Inc. All rights reserved, except as follows. Code is released under the Apache 2.0 license. The README.md file, and files in the "docs" folder are licensed under the Creative Commons Attribution 4.0 International License under the terms and conditions set forth in the file "LICENSE.docs". You may obtain a duplicate copy of the same license, titled CC-BY-SA-4.0, at http://creativecommons.org/licenses/by/4.0/.
