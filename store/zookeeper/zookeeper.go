@@ -40,16 +40,21 @@ func Register() {
 func New(endpoints []string, options *store.Config) (store.Store, error) {
 	s := &Zookeeper{}
 	s.timeout = defaultTimeout
+	logging := true
 
 	// Set options
 	if options != nil {
 		if options.ConnectionTimeout != 0 {
 			s.setTimeout(options.ConnectionTimeout)
 		}
+
+		if options.DisableLogging {
+			logging = false
+		}
 	}
 
 	// Connect to Zookeeper
-	conn, _, err := zk.Connect(endpoints, s.timeout)
+	conn, _, err := zk.Connect(endpoints, s.timeout, zk.WithLogInfo(logging))
 	if err != nil {
 		return nil, err
 	}
