@@ -34,6 +34,7 @@ You can find examples of usage for `libkv` under in `docs/examples.go`. Optional
 - Etcd versions >= `2.0` because it uses the new `coreos/etcd/client`, this might change in the future as the support for `APIv3` comes along and adds more capabilities.
 - Zookeeper versions >= `3.4.5`. Although this might work with previous version but this remains untested as of now.
 - Boltdb, which shouldn't be subject to any version dependencies.
+- Redis versions >= `3.2.6`. Although this might work with previous version but this remains untested as of now.
 
 ## Interface
 
@@ -62,19 +63,19 @@ Backend drivers in `libkv` are generally divided between **local drivers** and *
 
 Local drivers are usually used in complement to the distributed drivers to store informations that only needs to be available locally.
 
-| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  |
-|-----------------------|:----------:|:------:|:-----------:|:--------:|
-| Put                   |     X      |   X    |      X      |    X     |
-| Get                   |     X      |   X    |      X      |    X     |
-| Delete                |     X      |   X    |      X      |    X     |
-| Exists                |     X      |   X    |      X      |    X     |
-| Watch                 |     X      |   X    |      X      |          |
-| WatchTree             |     X      |   X    |      X      |          |
-| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |
-| List                  |     X      |   X    |      X      |    X     |
-| DeleteTree            |     X      |   X    |      X      |    X     |
-| AtomicPut             |     X      |   X    |      X      |    X     |
-| Close                 |     X      |   X    |      X      |    X     |
+| Calls                 |   Consul   |  Etcd  |  Zookeeper  |  BoltDB  | Redis |
+|-----------------------|:----------:|:------:|:-----------:|:--------:|:--------:|
+| Put                   |     X      |   X    |      X      |    X     |      X     |
+| Get                   |     X      |   X    |      X      |    X     |      X     |
+| Delete                |     X      |   X    |      X      |    X     |      X     |
+| Exists                |     X      |   X    |      X      |    X     |      X     |
+| Watch                 |     X      |   X    |      X      |          |      X     |
+| WatchTree             |     X      |   X    |      X      |          |      X     |
+| NewLock (Lock/Unlock) |     X      |   X    |      X      |          |      X     |
+| List                  |     X      |   X    |      X      |    X     |      X     |
+| DeleteTree            |     X      |   X    |      X      |    X     |      X     |
+| AtomicPut             |     X      |   X    |      X      |    X     |      X     |
+| Close                 |     X      |   X    |      X      |    X     |      X     |
 
 ## Limitations
 
@@ -86,9 +87,11 @@ Other than those special cases, you should expect the same experience for basic 
 
 Calls like `WatchTree` may return different events (or number of events) depending on the backend (for now, `Etcd` and `Consul` will likely return more events than `Zookeeper` that you should triage properly). Although you should be able to use it successfully to watch on events in an interchangeable way (see the **docker/leadership** repository or the **pkg/discovery/kv** package in **docker/docker**).
 
+For `Redis` backend, it relies on [key space notification](https://redis.io/topics/notifications) to perform WatchXXX/Lock related features. Please read the doc before using this feature.
+
 ## TLS
 
-Only `Consul` and `etcd` have support for TLS and you should build and provide your own `config.TLS` object to feed the client. Support is planned for `zookeeper`.
+Only `Consul` and `etcd` have support for TLS and you should build and provide your own `config.TLS` object to feed the client. Support is planned for `zookeeper` and `redis`.
 
 ## Roadmap
 
