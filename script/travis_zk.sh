@@ -3,7 +3,7 @@
 if [  $# -gt 0 ] ; then
     ZK_VERSION="$1"
 else
-    ZK_VERSION="3.4.7"
+    ZK_VERSION="3.4.12"
 fi
 
 wget "http://apache.cs.utah.edu/zookeeper/zookeeper-${ZK_VERSION}/zookeeper-${ZK_VERSION}.tar.gz"
