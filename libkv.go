@@ -22,7 +22,7 @@ var (
 		}
 		sort.Strings(keys)
 		return strings.Join(keys, ", ")
-	}()
+	}
 )
 
 // NewStore creates an instance of store
@@ -31,7 +31,7 @@ func NewStore(backend store.Backend, addrs []string, options *store.Config) (sto
 		return init(addrs, options)
 	}
 
-	return nil, fmt.Errorf("%s %s", store.ErrBackendNotSupported.Error(), supportedBackend)
+	return nil, fmt.Errorf("%s %s", store.ErrBackendNotSupported.Error(), supportedBackend())
 }
 
 // AddStore adds a new store backend to libkv
