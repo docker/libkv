@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	client = "localhost:2379"
+	client = "localhost:4001"
 )
 
 func makeEtcdClient(t *testing.T) store.Store {
