@@ -2,7 +2,7 @@ language: go
 
 go:
   - stable
-  - "1.10"
+  - "1.12"
 
 # let us have speedy Docker-based Travis workers
 sudo: false
