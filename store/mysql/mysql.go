@@ -93,8 +93,8 @@ func New(endpoints []string, opts *store.Config) (store.Store, error) {
 	}
 
 	db, err := sql.Open("mysql",
-		fmt.Sprintf("%s%s@tcp(%s)/%s?charset=utf8&interpolateParams=true&parseTime=True&loc=Local&timeout=%s",
-			opts.Username, passward, endpoints[0], opts.Database, timeout))
+		fmt.Sprintf("%s%s@tcp(%s)/%s?charset=utf8&interpolateParams=true&parseTime=True&loc=Local&timeout=%s&readTimeout=%s&writeTimeout=%s",
+			opts.Username, passward, endpoints[0], opts.Database, timeout, timeout, timeout))
 	if err != nil {
 		return nil, err
 	}
