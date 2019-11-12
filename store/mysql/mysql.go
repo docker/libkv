@@ -572,6 +572,7 @@ func (m *MySQL) AtomicDelete(key string, previous *store.KVPair) (ok bool, err e
 // NewLock creates a lock for a given key.
 // The returned Locker is not held and must be acquired
 // with `.Lock`. The Value is optional.
+// https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
 func (m *MySQL) NewLock(key string, options *store.LockOptions) (store.Locker, error) {
 	var (
 		value   []byte
@@ -841,7 +842,7 @@ func (l *mysqlLock) Lock(stopChan chan struct{}) (<-chan struct{}, error) {
 				lastIndex = index
 				expired = false
 			}
-		} else if err != nil && err != driver.ErrBadConn {
+		} else if err != nil && err != driver.ErrBadConn && err != mysql.ErrInvalidConn {
 			return nil, err
 		}
 		tick.Reset(ttl)
