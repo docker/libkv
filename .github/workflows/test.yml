@@ -1,0 +1,48 @@
+name: Test
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+    - master
+jobs:
+  test:
+    name: Test with Coverage
+    runs-on: ubuntu-latest
+    services:
+      etcd:
+        image: quay.io/coreos/etcd:v3.1.0
+        ports:
+          - 2379:2379
+        env:
+          ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+          ETCD_ADVERTISE_CLIENT_URLS: "http://0.0.0.0:2379"
+      consul:
+        image: consul:0.9.4
+        ports: 
+          - 8500:8500
+        env:
+          CONSUL_LOCAL_CONFIG: "{\"session_ttl_min\": \"1s\"}"
+      zookeeper:
+        image: zookeeper:3.5.6
+        ports: 
+          - 2181:2181
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12.x
+    - name: Check out code
+      uses: actions/checkout@master
+    - name: Install dependencies
+      run: |
+        go mod download
+    - name: Run Unit tests
+      run: |
+        go test -race -covermode atomic -coverprofile=profile.cov ./...
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        GO111MODULE=off go get github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github

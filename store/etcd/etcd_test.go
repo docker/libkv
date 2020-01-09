@@ -19,8 +19,8 @@ func makeEtcdClient(t *testing.T) store.Store {
 		[]string{client},
 		&store.Config{
 			ConnectionTimeout: 3 * time.Second,
-			Username:          "test",
-			Password:          "very-secure",
+			//Username:          "test",
+			//Password:          "very-secure",
 		},
 	)
 
