@@ -1,0 +1,12 @@
+*.swp
+*.swo
+*.log
+/.vscode/
+/.idea/
+/.kube/
+/config/*.json
+/kubernetes/*.yaml
+/test/scripts/*.sh
+debug
+
+

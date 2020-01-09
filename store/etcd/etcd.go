@@ -11,8 +11,8 @@ import (
 	"time"
 
 	etcd "github.com/coreos/etcd/client"
-	"github.com/docker/libkv"
-	"github.com/docker/libkv/store"
+	"github.com/fezho/libkv"
+	"github.com/fezho/libkv/store"
 )
 
 var (

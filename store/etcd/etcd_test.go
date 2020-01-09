@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/libkv"
-	"github.com/docker/libkv/store"
-	"github.com/docker/libkv/testutils"
+	"github.com/fezho/libkv"
+	"github.com/fezho/libkv/store"
+	"github.com/fezho/libkv/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	client = "localhost:4001"
+	client = "localhost:2379"
 )
 
 func makeEtcdClient(t *testing.T) store.Store {

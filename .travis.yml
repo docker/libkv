@@ -1,7 +1,11 @@
 language: go
 
 go:
-  - 1.8.7
+  - 1.12.x
+env:
+  global:
+    - GO111MODULE=on # Needed until Go 1.13
+
 
 # let us have speedy Docker-based Travis workers
 sudo: false
@@ -9,23 +13,24 @@ sudo: false
 before_install:
   # Symlink below is needed for Travis CI to work correctly on personal forks of libkv
   - ln -s $HOME/gopath/src/github.com/${TRAVIS_REPO_SLUG///libkv/} $HOME/gopath/src/github.com/docker
+  - pushd / # Fetch tools outside the source tree so they don't modify go.mod.
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
-  - go get github.com/golang/lint/golint
-  - go get github.com/GeertJohan/fgt
+  - go get golang.org/x/lint/golint
+  - popd
 
 before_script:
   - script/travis_consul.sh 0.6.3
   - script/travis_etcd.sh 3.0.0
-  - script/travis_zk.sh 3.5.4-beta
+  - script/travis_zk.sh 3.5.5
 
 script:
   - ./consul agent -server -bootstrap -advertise=127.0.0.1 -data-dir /tmp/consul -config-file=./config.json 1>/dev/null &
-  - ./etcd/etcd --listen-client-urls 'http://0.0.0.0:4001' --advertise-client-urls 'http://127.0.0.1:4001' >/dev/null 2>&1 &
-  - ./zk/bin/zkServer.sh start ./zk/conf/zoo.cfg 1> /dev/null
+  - ./etcd/etcd --listen-client-urls 'http://0.0.0.0:2379' --advertise-client-urls 'http://127.0.0.1:2379' >/dev/null 2>&1 &
+  - ./zk/bin/zkServer.sh start ./zk/conf/zoo.cfg
   - script/validate-gofmt
   - go vet ./...
-  - fgt golint ./...
+  - golint -set_exit_status ./...
   - go test -v -race ./...
   - script/coverage
   - goveralls -service=travis-ci -coverprofile=goverage.report
