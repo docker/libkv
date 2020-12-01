@@ -1,9 +1,9 @@
 # libkv
 
-[![GoDoc](https://godoc.org/github.com/docker/libkv?status.png)](https://godoc.org/github.com/docker/libkv)
+[![GoDoc](https://godoc.org/github.com/rpcxio/libkv?status.png)](https://godoc.org/github.com/docker/libkv)
 [![Build Status](https://travis-ci.org/docker/libkv.svg?branch=master)](https://travis-ci.org/docker/libkv)
 [![Coverage Status](https://coveralls.io/repos/docker/libkv/badge.svg)](https://coveralls.io/r/docker/libkv)
-[![Go Report Card](https://goreportcard.com/badge/github.com/docker/libkv)](https://goreportcard.com/report/github.com/docker/libkv)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rpcxio/libkv)](https://goreportcard.com/report/github.com/docker/libkv)
 
 `libkv` provides a `Go` native library to store metadata.
 
@@ -11,7 +11,7 @@ The goal of `libkv` is to abstract common store operations for multiple distribu
 
 For example, you can use it to store your metadata or for service discovery to register machines and endpoints inside your cluster.
 
-You can also easily implement a generic *Leader Election* on top of it (see the [docker/leadership](https://github.com/docker/leadership) repository).
+You can also easily implement a generic *Leader Election* on top of it (see the [docker/leadership](https://github.com/rpcxio/leadership) repository).
 
 As of now, `libkv` offers support for `Consul`, `Etcd`, `Zookeeper` (**Distributed** store) and `BoltDB` (**Local** store).
 
@@ -100,7 +100,7 @@ Only `Consul` and `etcd` have support for TLS and you should build and provide y
 
 ## Contributing
 
-Want to hack on libkv? [Docker's contributions guidelines](https://github.com/docker/docker/blob/master/CONTRIBUTING.md) apply.
+Want to hack on libkv? [Docker's contributions guidelines](https://github.com/rpcxio/docker/blob/master/CONTRIBUTING.md) apply.
 
 ## Copyright and license
 

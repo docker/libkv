@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/docker/libkv"
-	"github.com/docker/libkv/store"
+	"github.com/rpcxio/libkv"
+	"github.com/rpcxio/libkv/store"
 	bolt "go.etcd.io/bbolt"
 )
 
