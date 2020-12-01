@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/libkv"
-	"github.com/docker/libkv/store"
+	"github.com/rpcxio/libkv"
+	"github.com/rpcxio/libkv/store"
 	zk "github.com/samuel/go-zookeeper/zk"
 )
 
@@ -290,8 +290,12 @@ func (s *Zookeeper) DeleteTree(directory string) error {
 
 // AtomicPut put a value at "key" if the key has not been
 // modified in the meantime, throws an error if this is the case
-func (s *Zookeeper) AtomicPut(key string, value []byte, previous *store.KVPair, _ *store.WriteOptions) (bool, *store.KVPair, error) {
+func (s *Zookeeper) AtomicPut(key string, value []byte, previous *store.KVPair, opts *store.WriteOptions) (bool, *store.KVPair, error) {
 	var lastIndex uint64
+	var flag int32
+	if opts != nil && opts.TTL > 0 {
+		flag = zk.FlagEphemeral
+	}
 
 	if previous != nil {
 		meta, err := s.client.Set(s.normalize(key), value, int32(previous.LastIndex))
@@ -305,7 +309,7 @@ func (s *Zookeeper) AtomicPut(key string, value []byte, previous *store.KVPair, 
 		lastIndex = uint64(meta.Version)
 	} else {
 		// Interpret previous == nil as create operation.
-		_, err := s.client.Create(s.normalize(key), value, 0, zk.WorldACL(zk.PermAll))
+		_, err := s.client.Create(s.normalize(key), value, flag, zk.WorldACL(zk.PermAll))
 		if err != nil {
 			// Directory does not exist
 			if err == zk.ErrNoNode {
@@ -319,7 +323,7 @@ func (s *Zookeeper) AtomicPut(key string, value []byte, previous *store.KVPair, 
 				}
 
 				// Create the node
-				if _, err := s.client.Create(s.normalize(key), value, 0, zk.WorldACL(zk.PermAll)); err != nil {
+				if _, err := s.client.Create(s.normalize(key), value, flag, zk.WorldACL(zk.PermAll)); err != nil {
 					// Node exist error (when previous nil)
 					if err == zk.ErrNodeExists {
 						return false, nil, store.ErrKeyExists
