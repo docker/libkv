@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/coreos/etcd v3.3.25+incompatible
+	github.com/go-zookeeper/zk v1.0.2
 	github.com/hashicorp/consul v0.5.2
-	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.6
 )
