@@ -1,0 +1,43 @@
+name: CI
+on:
+  pull_request:
+    types: [opened, reopened]
+  push:
+    branches: ["**"]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-20.04
+    services:
+      consul:
+        image: consul:1.9.13
+        ports: [ "8500:8500" ]
+        env:
+          CONSUL_LOCAL_CONFIG: '{"session_ttl_min": "1s"}'
+          CONSUL_BIND_INTERFACE: eth0
+      etcd:
+        # 3.3.x is the newevest version that works without code changes
+        image: quay.io/coreos/etcd:v3.3.27
+        ports: [ "4001:4001" ]
+        env:
+          ETCD_ADVERTISE_CLIENT_URLS: http://127.0.0.1:4001
+          ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:4001
+      zookeeper:
+        image: zookeeper:3.7.0
+        ports: [ "2181:2181" ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17.5'
+      - run: cd tools && go install github.com/GeertJohan/fgt github.com/mattn/goveralls golang.org/x/lint golang.org/x/tools/cmd/cover
+      - run: script/validate-gofmt
+      - run: go vet ./...
+      - run: go test -v -race ./...
+        env:
+          LIBKV_TEST_SHORT_TIMEOUT: 10s
+      - run: script/coverage
