@@ -2,12 +2,22 @@ package testutils
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/docker/libkv/store"
 	"github.com/stretchr/testify/assert"
 )
+
+func getShortTimeout() time.Duration {
+	if timeout := os.Getenv("LIBKV_TEST_SHORT_TIMEOUT"); timeout != "" {
+		if timeout, err := time.ParseDuration(timeout); err != nil {
+			return timeout
+		}
+	}
+	return 5 * time.Second
+}
 
 // RunTestCommon tests the minimal required APIs which
 // should be supported by all K/V backends
@@ -184,7 +194,7 @@ func testWatch(t *testing.T, kv store.Store) {
 			if eventCount >= 4 {
 				return
 			}
-		case <-time.After(4 * time.Second):
+		case <-time.After(getShortTimeout()):
 			t.Fatal("Timeout reached")
 			return
 		}
@@ -240,7 +250,7 @@ func testWatchTree(t *testing.T, kv store.Store) {
 				return
 			}
 			eventCount++
-		case <-time.After(4 * time.Second):
+		case <-time.After(getShortTimeout()):
 			t.Fatal("Timeout reached")
 			return
 		}
@@ -457,7 +467,7 @@ func testLockTTL(t *testing.T, kv store.Store, otherConn store.Store) {
 	select {
 	case _ = <-done:
 		t.Fatal("Lock succeeded on a key that is supposed to be locked by another client")
-	case <-time.After(4 * time.Second):
+	case <-time.After(getShortTimeout()):
 		// Stop requesting the lock as we are blocked as expected
 		stop <- struct{}{}
 		break
@@ -484,7 +494,7 @@ func testLockTTL(t *testing.T, kv store.Store, otherConn store.Store) {
 	select {
 	case _ = <-locked:
 		break
-	case <-time.After(4 * time.Second):
+	case <-time.After(getShortTimeout()):
 		t.Fatal("Unable to take the lock, timed out")
 	}
 
@@ -539,7 +549,7 @@ func testLockWait(t *testing.T, kv, otherConn store.Store) {
 	select {
 	case <-gotLock2:
 		t.FailNow() // The other client should not have the lock.
-	case <-time.After(5 * time.Second):
+	case <-time.After(getShortTimeout()):
 		// Success! The other client is still waiting.
 	}
 
@@ -551,7 +561,7 @@ func testLockWait(t *testing.T, kv, otherConn store.Store) {
 	select {
 	case <-gotLock2:
 		// Success! The other client has acquired the lock.
-	case <-time.After(5 * time.Second):
+	case <-time.After(getShortTimeout()):
 		t.FailNow() // The other client should no longer be blocking.
 	}
 	assert.NoError(t, lock2.Unlock())
