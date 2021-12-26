@@ -71,7 +71,7 @@ func TestMultiplePersistConnection(t *testing.T) {
 	_ = os.Remove("/tmp/not_exist_dir/__boltdbtest")
 }
 
-// TestConcurrentConnection tests simultaenous get/put using
+// TestConcurrentConnection tests simultaneous get/put using
 // two handles.
 func TestConcurrentConnection(t *testing.T) {
 	var err error
