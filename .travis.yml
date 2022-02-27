@@ -3,8 +3,7 @@ language: go
 go:
   - 1.8.7
 
-# let us have speedy Docker-based Travis workers
-sudo: false
+sudo: true
 
 before_install:
   # Symlink below is needed for Travis CI to work correctly on personal forks of libkv
@@ -13,6 +12,8 @@ before_install:
   - go get github.com/mattn/goveralls
   - go get github.com/golang/lint/golint
   - go get github.com/GeertJohan/fgt
+  # ca-certificates is needed for wget to work properly
+  - sudo apt-get install ca-certificates
 
 before_script:
   - script/travis_consul.sh 0.6.3
