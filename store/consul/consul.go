@@ -73,6 +73,7 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 	config := api.DefaultConfig()
 	s.config = config
 	config.HttpClient = http.DefaultClient
+	config.HttpClient.Transport = http.DefaultTransport
 	config.Address = endpoints[0]
 	config.Scheme = "http"
 
