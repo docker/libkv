@@ -71,8 +71,10 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 	}
 
 	dir, _ := filepath.Split(endpoints[0])
-	if err = os.MkdirAll(dir, 0750); err != nil {
-		return nil, err
+	if dir != "" {
+		if err = os.MkdirAll(dir, 0750); err != nil {
+			return nil, err
+		}
 	}
 
 	if options.PersistConnection {

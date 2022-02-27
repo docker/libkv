@@ -134,11 +134,24 @@ func TestConcurrentConnection(t *testing.T) {
 	_ = os.Remove("/tmp/__boltdbtest")
 }
 
-func TestBoldDBStore(t *testing.T) {
+func TestBoltDBStore(t *testing.T) {
 	kv := makeBoltDBClient(t)
 
 	testutils.RunTestCommon(t, kv)
 	testutils.RunTestAtomic(t, kv)
 
 	_ = os.Remove("/tmp/not_exist_dir/__boltdbtest")
+}
+
+func TestRelativePathWithNoBeginningSlash(t *testing.T) {
+
+	_, err := libkv.NewStore(
+		store.BOLTDB,
+		[]string{"__boltdbtest"},
+		&store.Config{
+			Bucket: "boltDBTest",
+		},
+	)
+
+	assert.NoError(t, err)
 }
