@@ -76,11 +76,11 @@ type Store interface {
 	Exists(key string) (bool, error)
 
 	// Watch for changes on a key
-	Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, error)
+	Watch(key string, stopCh <-chan struct{}) (<-chan *KVPair, <-chan error)
 
 	// WatchTree watches for changes on child nodes under
 	// a given directory
-	WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*KVPair, error)
+	WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*KVPair, <-chan error)
 
 	// NewLock creates a lock for a given key.
 	// The returned Locker is not held and must be acquired

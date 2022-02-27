@@ -276,9 +276,10 @@ func (s *Consul) DeleteTree(directory string) error {
 // on errors. Upon creation, the current value will first
 // be sent to the channel. Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, <-chan error) {
 	kv := s.client.KV()
 	watchCh := make(chan *store.KVPair)
+	errorCh := make(chan error)
 
 	go func() {
 		defer close(watchCh)
@@ -298,6 +299,7 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 			// Get the key
 			pair, meta, err := kv.Get(key, opts)
 			if err != nil {
+				errorCh <- err
 				return
 			}
 
@@ -306,6 +308,7 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 			if opts.WaitIndex == meta.LastIndex {
 				continue
 			}
+
 			opts.WaitIndex = meta.LastIndex
 
 			// Return the value to the channel
@@ -320,7 +323,7 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // WatchTree watches for changes on a "directory"
@@ -328,9 +331,10 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 // on errors. Upon creating a watch, the current childs values
 // will be sent to the channel .Providing a non-nil stopCh can
 // be used to stop watching.
-func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*store.KVPair, <-chan error) {
 	kv := s.client.KV()
 	watchCh := make(chan []*store.KVPair)
+	errorCh := make(chan error)
 
 	go func() {
 		defer close(watchCh)
@@ -349,6 +353,7 @@ func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*
 			// Get all the childrens
 			pairs, meta, err := kv.List(directory, opts)
 			if err != nil {
+				errorCh <- err
 				return
 			}
 
@@ -375,7 +380,7 @@ func (s *Consul) WatchTree(directory string, stopCh <-chan struct{}) (<-chan []*
 		}
 	}()
 
-	return watchCh, nil
+	return watchCh, errorCh
 }
 
 // NewLock returns a handle to a lock struct which can
