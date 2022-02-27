@@ -74,7 +74,6 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 	s.config = config
 	config.HttpClient = http.DefaultClient
 	config.Address = endpoints[0]
-	config.Scheme = "http"
 
 	// Set options
 	if options != nil {
