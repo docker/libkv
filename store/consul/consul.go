@@ -238,7 +238,11 @@ func (s *Consul) Exists(key string) (bool, error) {
 
 // List child nodes of a given directory
 func (s *Consul) List(directory string) ([]*store.KVPair, error) {
-	pairs, _, err := s.client.KV().List(s.normalize(directory), nil)
+	options := &api.QueryOptions{
+		AllowStale:        false,
+		RequireConsistent: true,
+	}
+	pairs, _, err := s.client.KV().List(s.normalize(directory), options)
 	if err != nil {
 		return nil, err
 	}
