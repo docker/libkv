@@ -311,10 +311,14 @@ func (s *Consul) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair
 			// Return the value to the channel
 			// FIXME: What happens when a key is deleted?
 			if pair != nil {
-				watchCh <- &store.KVPair{
+				select {
+				case watchCh <- &store.KVPair{
 					Key:       pair.Key,
 					Value:     pair.Value,
 					LastIndex: pair.ModifyIndex,
+				}:
+				case <-stopCh:
+					return
 				}
 			}
 		}
