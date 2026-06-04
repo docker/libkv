@@ -1,8 +1,8 @@
-#Examples
+# Examples
 
 This document contains useful example of usage for `libkv`. It might not be complete but provides with general informations on how to use the client.
 
-##Create a store and use Put/Get/Delete
+## Create a store and use Put/Get/Delete
 
 ```go
 package main
@@ -62,7 +62,7 @@ func main() {
 }
 ```
 
-##List keys
+## List keys
 
 ```go
 // List will list all the keys under `key` if it contains a set of child keys/values
@@ -73,7 +73,7 @@ for _, pair := range entries {
 
 ```
 
-##Watching for events on a single key (Watch)
+## Watching for events on a single key (Watch)
 
 You can use watches to watch modifications on a key. First you need to check if the key exists. If this is not the case, we need to create it using the `Put` function.
 
@@ -97,7 +97,7 @@ select {
 
 ```
 
-##Watching for events happening on child keys (WatchTree)
+## Watching for events happening on child keys (WatchTree)
 
 You can use watches to watch modifications on a key. First you need to check if the key exists. If this is not the case, we need to create it using the `Put` function. There is a special step here though if you want your code to work across backends. Because `etcd` is a special case and it makes the distinction between directories and keys, we need to make sure that the created key is considered as a directory by enforcing `IsDir` at `true`.
 
