@@ -1,4 +1,4 @@
-#Cross-Backend Compatibility
+# Cross-Backend Compatibility
 
 The value of `libkv` is not to duplicate the code for programs that should support multiple distributed K/V stores like the classic `Consul`/`etcd`/`zookeeper` trio.
 
@@ -6,7 +6,7 @@ This document provides with general guidelines for users willing to support thos
 
 Please note that most of those workarounds are going to disappear in the future with `etcd` APIv3.
 
-##Etcd directory/key distinction
+## Etcd directory/key distinction
 
 `etcd` with APIv2 makes the distinction between keys and directories. The result with `libkv` is that when using the etcd driver:
 
@@ -17,7 +17,7 @@ This is fundamentaly different than `Consul` and `zookeeper` which are more perm
 
 Apiv3 is in the work for `etcd`, which removes this key/directory distinction, but until then you should follow these workarounds to make your `libkv` code work across backends.
 
-###Put
+### Put
 
 `etcd` cannot put values on directories, so this puts a major restriction compared to `Consul` and `zookeeper`.
 
@@ -32,7 +32,7 @@ _ := kv.Put("path/to/key", []byte("bar"), nil)
 
 Will work on `Consul` and `zookeeper` but fail for `etcd`. This is because the first `Put` in the case of `etcd` will recursively create the directory hierarchy and `path/to/key` is now considered as a directory. Thus, values should always be stored on leaves if the support for the three backends is planned.
 
-###WatchTree
+### WatchTree
 
 When initializing the `WatchTree`, the natural way to do so is through the following code:
 
@@ -63,7 +63,7 @@ events, err := kv.WatchTree(key, nil)
 
 The code above will work for the three backends but make sure to not try to store any value at that path as the call to `Put` will fail for `etcd` (you can only put at `path/to/key/foo`, `path/to/key/bar` for example).
 
-##Etcd distributed locking
+## Etcd distributed locking
 
 There is `Lock` mechanisms baked in the `coreos/etcd/client` for now. Instead, `libkv` has its own implementation of a `Lock` on top of `etcd`.
 
