@@ -237,7 +237,7 @@ func (s *Zookeeper) WatchTree(directory string, stopCh <-chan struct{}) (<-chan 
 
 // List child nodes of a given directory
 func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
-	keys, stat, err := s.client.Children(s.normalize(directory))
+	keys, _, err := s.client.Children(s.normalize(directory))
 	if err != nil {
 		if err == zk.ErrNoNode {
 			return nil, store.ErrKeyNotFound
@@ -261,7 +261,7 @@ func (s *Zookeeper) List(directory string) ([]*store.KVPair, error) {
 		kv = append(kv, &store.KVPair{
 			Key:       key,
 			Value:     []byte(pair.Value),
-			LastIndex: uint64(stat.Version),
+			LastIndex: uint64(pair.LastIndex),
 		})
 	}
 
