@@ -56,6 +56,7 @@ type etcdLock struct {
 
 const (
 	periodicSync      = 5 * time.Minute
+	periodicSyncDelay = 5 * time.Second
 	defaultLockTTL    = 20 * time.Second
 	defaultUpdateTime = 5 * time.Second
 )
@@ -105,8 +106,12 @@ func New(addrs []string, options *store.Config) (store.Store, error) {
 	// Periodic Cluster Sync
 	go func() {
 		for {
+			// AutoSync should never be broken.
+			// if so when one etcd cluster node change endpoint ip address then docker client will never known.
 			if err := c.AutoSync(context.Background(), periodicSync); err != nil {
-				return
+				log.Printf("Failed to AutoSync from etcd,Because of %s\n", err.Error())
+				time.Sleep(periodicSyncDelay)
+				continue
 			}
 		}
 	}()
