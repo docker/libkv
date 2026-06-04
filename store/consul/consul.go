@@ -84,6 +84,9 @@ func New(endpoints []string, options *store.Config) (store.Store, error) {
 		if options.ConnectionTimeout != 0 {
 			s.setTimeout(options.ConnectionTimeout)
 		}
+		if options.Token != nil {
+			s.config.Token = options.Token
+		}
 	}
 
 	// Creates a new client
