@@ -41,6 +41,20 @@ func SplitKey(key string) (path []string) {
 	return path
 }
 
+// Creates a closed, buffered error channel and sends err if not nil
+func ErrorChannelWith(err error) <-chan error {
+	var errorCh chan error
+	if err == nil {
+		errorCh = make(chan error)
+	} else {
+		errorCh = make(chan error, 1)
+		errorCh <- err
+	}
+
+	close(errorCh)
+	return errorCh
+}
+
 // join the path parts with '/'
 func join(parts []string) string {
 	return strings.Join(parts, "/")

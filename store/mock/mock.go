@@ -49,15 +49,15 @@ func (s *Mock) Exists(key string) (bool, error) {
 }
 
 // Watch mock
-func (s *Mock) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, error) {
+func (s *Mock) Watch(key string, stopCh <-chan struct{}) (<-chan *store.KVPair, <-chan error) {
 	args := s.Mock.Called(key, stopCh)
-	return args.Get(0).(<-chan *store.KVPair), args.Error(1)
+	return args.Get(0).(<-chan *store.KVPair), store.ErrorChannelWith(args.Error(1))
 }
 
 // WatchTree mock
-func (s *Mock) WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*store.KVPair, error) {
+func (s *Mock) WatchTree(prefix string, stopCh <-chan struct{}) (<-chan []*store.KVPair, <-chan error) {
 	args := s.Mock.Called(prefix, stopCh)
-	return args.Get(0).(chan []*store.KVPair), args.Error(1)
+	return args.Get(0).(chan []*store.KVPair), store.ErrorChannelWith(args.Error(1))
 }
 
 // NewLock mock
