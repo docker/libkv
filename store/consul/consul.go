@@ -24,7 +24,7 @@ const (
 	RenewSessionRetryMax = 5
 
 	// MaxSessionDestroyAttempts is the maximum times we will try
-	// to explicitely destroy the session attached to a lock after
+	// to explicitly destroy the session attached to a lock after
 	// the connectivity to the store has been lost
 	MaxSessionDestroyAttempts = 5
 
@@ -429,7 +429,7 @@ func (s *Consul) NewLock(key string, options *store.LockOptions) (store.Locker, 
 }
 
 // renewLockSession is used to renew a session Lock, it takes
-// a stopRenew chan which is used to explicitely stop the session
+// a stopRenew chan which is used to explicitly stop the session
 // renew process. The renew routine never stops until a signal is
 // sent to this channel. If deleting the session fails because the
 // connection to the store is lost, it keeps trying to delete the
@@ -449,7 +449,7 @@ func (s *Consul) renewLockSession(initialTTL string, id string, stopRenew chan s
 				entry, _, err := s.client.Session().Renew(id, nil)
 				if err != nil {
 					// If an error occurs, continue until the
-					// session gets destroyed explicitely or
+					// session gets destroyed explicitly or
 					// the session ttl times out
 					continue
 				}
